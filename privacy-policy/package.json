@@ -1,0 +1,15 @@
+{
+  "name": "tictactoe-privacy-policy",
+  "version": "1.0.0",
+  "description": "Privacy Policy for Tic Tac Toe Game",
+  "main": "index.html",
+  "scripts": {
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "privacy-policy",
+    "tictactoe"
+  ],
+  "author": "SA-Private Limited",
+  "license": "MIT"
+}

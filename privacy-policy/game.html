@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe - Play Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #fffffe;
+            text-shadow: 0 0 20px #e94560;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .bet-display {
+            text-align: center;
+            background: #e94560;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #fff;
+        }
+
+        .bet-display.hidden {
+            display: none;
+        }
+
+        .bet-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .bet-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .balances {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .balance-item {
+            flex: 1;
+            background: #0f0e17;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #2a3a5a;
+        }
+
+        .balance-label {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .balance-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .balance-item.player-x .balance-value {
+            color: #e94560;
+        }
+
+        .balance-item.player-o .balance-value {
+            color: #4ecca3;
+        }
+
+        .scoreboard {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .score-item {
+            flex: 1;
+            background: #16213e;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #2a3a5a;
+        }
+
+        .score-label {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .score-item.player-x .score-value {
+            color: #e94560;
+        }
+
+        .score-item.player-o .score-value {
+            color: #4ecca3;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status.winner {
+            color: #4ecca3;
+            text-shadow: 0 0 15px #4ecca3;
+        }
+
+        .status.draw {
+            color: #ffa500;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            aspect-ratio: 1;
+        }
+
+        .cell {
+            background: #16213e;
+            border: 3px solid #2a3a5a;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .cell:hover:not(.taken) {
+            background: #1f2c4a;
+            border-color: #e94560;
+            transform: scale(1.05);
+        }
+
+        .cell.taken {
+            cursor: not-allowed;
+        }
+
+        .cell.x {
+            color: #e94560;
+            text-shadow: 0 0 20px #e94560;
+        }
+
+        .cell.o {
+            color: #4ecca3;
+            text-shadow: 0 0 20px #4ecca3;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            flex: 1;
+            padding: 15px 25px;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .button.primary {
+            background: #e94560;
+            color: white;
+        }
+
+        .button.secondary {
+            background: #1a237e;
+            color: white;
+        }
+
+        .button.tertiary {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .button.danger {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            border: 3px solid #667eea;
+            box-shadow: 0 0 50px rgba(102, 126, 234, 0.5);
+        }
+
+        .modal-title {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #fffffe;
+        }
+
+        .modal-subtitle {
+            text-align: center;
+            color: #b8b9c4;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+            background: #0f0e17;
+            border-radius: 12px;
+            border: 3px solid #e94560;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+        }
+
+        .input-label {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4ecca3;
+            margin-right: 15px;
+        }
+
+        .input-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #fffffe;
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .winner-modal .modal-content {
+            border-color: #4ecca3;
+            box-shadow: 0 0 50px rgba(78, 204, 163, 0.5);
+        }
+
+        .trophy {
+            font-size: 5em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .winner-title {
+            font-size: 2.5em;
+            color: #4ecca3;
+            text-shadow: 0 0 20px #4ecca3;
+        }
+
+        .winnings-box {
+            background: #0f0e17;
+            border: 3px solid #e94560;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .winnings-label {
+            color: #b8b9c4;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .winnings-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .balance-box {
+            background: #1a237e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .balance-box .winnings-label {
+            color: #b8b9c4;
+        }
+
+        .balance-box .winnings-value {
+            color: #4ecca3;
+            font-size: 2em;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer a {
+            color: #4ecca3;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .cell {
+                font-size: 3em;
+            }
+
+            .modal-content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 TIC TAC TOE</h1>
+        </div>
+
+        <div class="bet-display hidden" id="betDisplay">
+            <div class="bet-label">Current Points</div>
+            <div class="bet-value" id="betValue">0 Pts</div>
+        </div>
+
+        <div class="balances">
+            <div class="balance-item player-x">
+                <div class="balance-label">Player X Points</div>
+                <div class="balance-value" id="balanceX">0 Pts</div>
+            </div>
+            <div class="balance-item player-o">
+                <div class="balance-label">Player O Points</div>
+                <div class="balance-value" id="balanceO">0 Pts</div>
+            </div>
+        </div>
+
+        <div class="scoreboard">
+            <div class="score-item player-x">
+                <div class="score-label">Player X</div>
+                <div class="score-value" id="scoreX">0</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Draws</div>
+                <div class="score-value" id="scoreDraws">0</div>
+            </div>
+            <div class="score-item player-o">
+                <div class="score-label">Player O</div>
+                <div class="score-value" id="scoreO">0</div>
+            </div>
+        </div>
+
+        <div class="status" id="status">Player X's Turn</div>
+
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <div class="buttons">
+            <div class="button-row">
+                <button class="button primary" onclick="resetGame()">New Game</button>
+                <button class="button secondary" onclick="resetScores()">Reset Scores</button>
+            </div>
+            <button class="button tertiary" onclick="showBetModal()">Set Points</button>
+            <button class="button danger" onclick="confirmResetBalances()">Reset Points</button>
+        </div>
+
+        <div class="footer">
+            <p>Powered by <a href="https://sa-privatelimited.com" target="_blank">sa-privateLimited.com</a></p>
+            <p style="margin-top: 10px;"><a href="index.html">Privacy Policy</a></p>
+        </div>
+    </div>
+
+    <!-- Bet Modal -->
+    <div class="modal" id="betModal">
+        <div class="modal-content">
+            <div class="modal-title">Set Points</div>
+            <div class="modal-subtitle">The winner will receive these points. Enter 0 to play without points.</div>
+            <div class="input-container">
+                <div class="input-label">Pts</div>
+                <input type="number" class="input-field" id="betInput" placeholder="0" min="0">
+            </div>
+            <div class="modal-buttons">
+                <button class="button secondary" onclick="closeBetModal()">Cancel</button>
+                <button class="button primary" onclick="setBet()">Set Points</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Winner Modal -->
+    <div class="modal winner-modal" id="winnerModal">
+        <div class="modal-content">
+            <div class="trophy">🏆</div>
+            <div class="modal-title winner-title" id="winnerText">Player X Wins!</div>
+            <div class="winnings-box" id="winningsBox">
+                <div class="winnings-label">Points Earned</div>
+                <div class="winnings-value" id="winningsValue">0 Pts</div>
+            </div>
+            <div class="balance-box">
+                <div class="winnings-label">Total Points</div>
+                <div class="winnings-value" id="totalBalance">0 Pts</div>
+            </div>
+            <button class="button primary" onclick="closeWinnerModal()" style="width: 100%;">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let scores = { X: 0, O: 0, draws: 0 };
+        let balances = { X: 0, O: 0 };
+        let betAmount = 0;
+
+        // Load data from localStorage
+        function loadData() {
+            const savedScores = localStorage.getItem('tictactoe_scores');
+            const savedBalances = localStorage.getItem('tictactoe_balances');
+            const savedBet = localStorage.getItem('tictactoe_bet');
+
+            if (savedScores) {
+                scores = JSON.parse(savedScores);
+                updateScoreDisplay();
+            }
+
+            if (savedBalances) {
+                balances = JSON.parse(savedBalances);
+                updateBalanceDisplay();
+            }
+
+            if (savedBet) {
+                betAmount = parseFloat(savedBet);
+                updateBetDisplay();
+            }
+        }
+
+        // Save data to localStorage
+        function saveScores() {
+            localStorage.setItem('tictactoe_scores', JSON.stringify(scores));
+        }
+
+        function saveBalances() {
+            localStorage.setItem('tictactoe_balances', JSON.stringify(balances));
+        }
+
+        function saveBet() {
+            localStorage.setItem('tictactoe_bet', betAmount.toString());
+        }
+
+        // Winning combinations
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]  // Diagonals
+        ];
+
+        // Initialize game
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+            showBetModal();
+        });
+
+        function handleCellClick(e) {
+            const cell = e.target;
+            const index = parseInt(cell.getAttribute('data-index'));
+
+            if (board[index] !== '' || !gameActive) {
+                return;
+            }
+
+            board[index] = currentPlayer;
+            cell.textContent = currentPlayer;
+            cell.classList.add('taken', currentPlayer.toLowerCase());
+
+            checkResult();
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winner = null;
+
+            for (let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    roundWon = true;
+                    winner = board[a];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                gameActive = false;
+                scores[winner]++;
+                saveScores();
+                updateScoreDisplay();
+
+                if (betAmount > 0) {
+                    balances[winner] += betAmount;
+                    saveBalances();
+                    updateBalanceDisplay();
+                    showWinnerModal(winner);
+                } else {
+                    updateStatus(`Player ${winner} Wins!`, true);
+                }
+                return;
+            }
+
+            if (!board.includes('')) {
+                gameActive = false;
+                scores.draws++;
+                saveScores();
+                updateScoreDisplay();
+                updateStatus("It's a Draw!", false);
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateStatus(`Player ${currentPlayer}'s Turn`);
+        }
+
+        function updateStatus(message, isWinner = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status';
+            if (isWinner) {
+                status.classList.add('winner');
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('scoreX').textContent = scores.X;
+            document.getElementById('scoreO').textContent = scores.O;
+            document.getElementById('scoreDraws').textContent = scores.draws;
+        }
+
+        function updateBalanceDisplay() {
+            document.getElementById('balanceX').textContent = balances.X + ' Pts';
+            document.getElementById('balanceO').textContent = balances.O + ' Pts';
+        }
+
+        function updateBetDisplay() {
+            const betDisplay = document.getElementById('betDisplay');
+            const betValue = document.getElementById('betValue');
+
+            if (betAmount > 0) {
+                betDisplay.classList.remove('hidden');
+                betValue.textContent = betAmount + ' Pts';
+            } else {
+                betDisplay.classList.add('hidden');
+            }
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('taken', 'x', 'o');
+            });
+
+            updateStatus("Player X's Turn");
+            showBetModal();
+        }
+
+        function resetScores() {
+            if (confirm('Are you sure you want to reset all scores?')) {
+                scores = { X: 0, O: 0, draws: 0 };
+                saveScores();
+                updateScoreDisplay();
+            }
+        }
+
+        function showBetModal() {
+            const modal = document.getElementById('betModal');
+            const input = document.getElementById('betInput');
+            input.value = betAmount;
+            modal.classList.add('show');
+            input.focus();
+        }
+
+        function closeBetModal() {
+            document.getElementById('betModal').classList.remove('show');
+        }
+
+        function setBet() {
+            const input = document.getElementById('betInput');
+            const value = parseFloat(input.value) || 0;
+
+            if (value < 0) {
+                alert('Please enter a valid number (0 or greater)');
+                return;
+            }
+
+            betAmount = value;
+            saveBet();
+            updateBetDisplay();
+            closeBetModal();
+        }
+
+        function showWinnerModal(winner) {
+            const modal = document.getElementById('winnerModal');
+            document.getElementById('winnerText').textContent = `Player ${winner} Wins!`;
+            document.getElementById('winningsValue').textContent = betAmount + ' Pts';
+            document.getElementById('totalBalance').textContent = balances[winner] + ' Pts';
+
+            const winningsBox = document.getElementById('winningsBox');
+            winningsBox.style.display = betAmount > 0 ? 'block' : 'none';
+
+            modal.classList.add('show');
+        }
+
+        function closeWinnerModal() {
+            document.getElementById('winnerModal').classList.remove('show');
+        }
+
+        function confirmResetBalances() {
+            if (confirm('Are you sure you want to reset both player points to 0?')) {
+                balances = { X: 0, O: 0 };
+                saveBalances();
+                updateBalanceDisplay();
+            }
+        }
+    </script>
+</body>
+</html>
