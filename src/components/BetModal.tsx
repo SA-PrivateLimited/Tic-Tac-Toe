@@ -60,26 +60,26 @@ export const BetModal: React.FC<BetModalProps> = ({ visible, onConfirm, onCancel
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <Text style={styles.title}>
-            {currentBet > 0 ? 'Change Bet Amount' : 'Set Bet Amount'}
+            {currentBet > 0 ? 'Change Points' : 'Set Points'}
           </Text>
           <Text style={styles.subtitle}>
             {currentBet > 0 
-              ? `Current bet: ₹${currentBet}. Enter 0 to remove betting.`
-              : 'The winner will receive this amount. Enter 0 to play without betting.'}
+              ? `Current points: ${currentBet}. Enter 0 to remove points.`
+              : 'The winner will receive these points. Enter 0 to play without points.'}
           </Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.currencySymbol}>₹</Text>
-            <TextInput
-              style={styles.input}
-              value={betInput}
-              onChangeText={setBetInput}
-              keyboardType="numeric"
-              placeholder="0"
-              placeholderTextColor="#666"
-              autoFocus
-            />
-          </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.currencySymbol}>Pts</Text>
+                <TextInput
+                  style={styles.input}
+                  value={betInput}
+                  onChangeText={setBetInput}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#666"
+                  autoFocus
+                />
+              </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -102,7 +102,7 @@ export const BetModal: React.FC<BetModalProps> = ({ visible, onConfirm, onCancel
               style={[styles.button, styles.confirmButton]}
               onPress={handleConfirm}
             >
-              <Text style={styles.buttonText}>Set Bet</Text>
+              <Text style={styles.buttonText}>Set Points</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   currencySymbol: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: '#4ecca3',
     marginRight: 12,

@@ -133,7 +133,7 @@ export const GameScreen: React.FC = () => {
             onPress={handleSetBetAmount}
           >
             <Text style={styles.buttonText}>
-              {betAmount > 0 ? `Change Bet (₹${betAmount})` : 'Set Bet'}
+              {betAmount > 0 ? `Change Points (${betAmount})` : 'Set Points'}
             </Text>
           </TouchableOpacity>
 
@@ -142,9 +142,15 @@ export const GameScreen: React.FC = () => {
             style={[styles.button, styles.resetBalancesButton]}
             onPress={handleResetBalances}
           >
-            <Text style={styles.buttonText}>Reset Balances</Text>
+            <Text style={styles.buttonText}>Reset Points</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Powered by credit */}
+        <Text style={styles.poweredBy}>
+          Powered by{' '}
+          <Text style={styles.poweredByLink}>sa-privateLimited.com</Text>
+        </Text>
       </View>
 
       {/* Betting Modal - shown when user wants to set/reset bet */}
@@ -167,8 +173,8 @@ export const GameScreen: React.FC = () => {
       {/* Reset Balances Confirmation Modal */}
       <ConfirmModal
         visible={showResetBalancesModal}
-        title="Reset Balances"
-        message="Are you sure you want to reset both player balances to ₹0?"
+        title="Reset Points"
+        message="Are you sure you want to reset both player points to 0?"
         confirmText="Reset"
         cancelText="Cancel"
         onConfirm={handleConfirmResetBalances}
@@ -274,5 +280,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  poweredBy: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  poweredByLink: {
+    color: '#4ecca3',
+    fontWeight: '600',
   },
 });

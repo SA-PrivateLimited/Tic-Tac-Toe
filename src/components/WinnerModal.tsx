@@ -39,19 +39,19 @@ export const WinnerModal: React.FC<WinnerModalProps> = ({
             Player {winner} Wins!
           </Text>
 
-          {betAmount > 0 && (
-            <>
-              <View style={styles.winningsContainer}>
-                <Text style={styles.winningsLabel}>Winnings</Text>
-                <Text style={styles.winningsAmount}>₹{betAmount}</Text>
-              </View>
+              {betAmount > 0 && (
+                <>
+                  <View style={styles.winningsContainer}>
+                    <Text style={styles.winningsLabel}>Points Earned</Text>
+                    <Text style={styles.winningsAmount}>{betAmount} Pts</Text>
+                  </View>
 
-              <View style={styles.balanceContainer}>
-                <Text style={styles.balanceLabel}>Updated Balance</Text>
-                <Text style={styles.balanceAmount}>₹{newBalance}</Text>
-              </View>
-            </>
-          )}
+                  <View style={styles.balanceContainer}>
+                    <Text style={styles.balanceLabel}>Total Points</Text>
+                    <Text style={styles.balanceAmount}>{newBalance} Pts</Text>
+                  </View>
+                </>
+              )}
 
           <TouchableOpacity
             style={styles.button}

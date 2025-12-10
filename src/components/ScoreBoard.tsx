@@ -21,24 +21,24 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
 }) => {
   return (
     <View>
-      {/* Display current bet amount if set */}
+      {/* Display current points if set */}
       {betAmount > 0 && (
         <View style={styles.betContainer}>
-          <Text style={styles.betLabel}>Current Bet</Text>
-          <Text style={styles.betAmount}>₹{betAmount}</Text>
+          <Text style={styles.betLabel}>Current Points</Text>
+          <Text style={styles.betAmount}>{betAmount} Pts</Text>
         </View>
       )}
 
       {/* Player balances row */}
       <View style={styles.balanceContainer}>
-        <View style={styles.balanceItem}>
-          <Text style={[styles.balanceLabel, styles.xColor]}>Player X Balance</Text>
-          <Text style={[styles.balanceValue, styles.xColor]}>₹{xBalance}</Text>
-        </View>
-        <View style={styles.balanceItem}>
-          <Text style={[styles.balanceLabel, styles.oColor]}>Player O Balance</Text>
-          <Text style={[styles.balanceValue, styles.oColor]}>₹{oBalance}</Text>
-        </View>
+          <View style={styles.balanceItem}>
+            <Text style={[styles.balanceLabel, styles.xColor]}>Player X Points</Text>
+            <Text style={[styles.balanceValue, styles.xColor]}>{xBalance} Pts</Text>
+          </View>
+          <View style={styles.balanceItem}>
+            <Text style={[styles.balanceLabel, styles.oColor]}>Player O Points</Text>
+            <Text style={[styles.balanceValue, styles.oColor]}>{oBalance} Pts</Text>
+          </View>
       </View>
 
       {/* Scores row */}

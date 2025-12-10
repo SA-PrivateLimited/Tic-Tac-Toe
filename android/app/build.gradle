@@ -15,14 +15,14 @@ android {
     ndkVersion rootProject.ext.ndkVersion
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.tictactoe"
+    namespace "com.satictactoe"
 
     defaultConfig {
-        applicationId "com.tictactoe"
+        applicationId "com.satictactoe"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 6
+        versionName "1.0.6"
     }
 
     signingConfigs {
@@ -50,6 +50,10 @@ android {
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // Enable native debug symbols for crash reporting
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
         }
     }
 

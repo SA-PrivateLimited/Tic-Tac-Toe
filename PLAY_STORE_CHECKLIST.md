@@ -4,7 +4,7 @@
 
 ### 1. App Configuration ✅
 - **Status**: DONE
-- **Package Name**: com.tictactoe
+- **Package Name**: com.satictactoe
 - **App Name**: TicTacToe
 - **Version Code**: 1
 - **Version Name**: 1.0.0

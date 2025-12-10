@@ -107,7 +107,7 @@ See [PLAY_STORE_CHECKLIST.md](PLAY_STORE_CHECKLIST.md) for the complete deployme
 
 ### Key Configuration
 
-- **App ID**: `com.tictactoe`
+- **App ID**: `com.satictactoe`
 - **Version**: 1.0.0 (versionCode: 1)
 - **Target SDK**: 34 (Android 14)
 - **Min SDK**: 24 (Android 7.0)
