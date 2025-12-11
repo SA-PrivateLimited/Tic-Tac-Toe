@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Board } from '../components/Board';
 import { ScoreBoard } from '../components/ScoreBoard';
 import { BetModal } from '../components/BetModal';
 import { WinnerModal } from '../components/WinnerModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { SoundSettingsModal } from '../components/SoundSettingsModal';
 import { useGameStore } from '../store/gameStore';
 
 export const GameScreen: React.FC = () => {
@@ -31,6 +32,7 @@ export const GameScreen: React.FC = () => {
   } = useGameStore();
 
   const [showResetBalancesModal, setShowResetBalancesModal] = useState(false);
+  const [showSoundSettingsModal, setShowSoundSettingsModal] = useState(false);
 
   useEffect(() => {
     // Load scores and balances from AsyncStorage on mount
@@ -84,7 +86,12 @@ export const GameScreen: React.FC = () => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f0e17" />
       
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
         <Text style={styles.title}>Tic Tac Toe</Text>
 
         <ScoreBoard
@@ -137,6 +144,14 @@ export const GameScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
+          {/* Sound Settings button */}
+          <TouchableOpacity
+            style={[styles.button, styles.soundButton]}
+            onPress={() => setShowSoundSettingsModal(true)}
+          >
+            <Text style={styles.buttonText}>🎵 Sound Settings</Text>
+          </TouchableOpacity>
+
           {/* Reset Balances button */}
           <TouchableOpacity
             style={[styles.button, styles.resetBalancesButton]}
@@ -151,7 +166,7 @@ export const GameScreen: React.FC = () => {
           Powered by{' '}
           <Text style={styles.poweredByLink}>sa-privateLimited.com</Text>
         </Text>
-      </View>
+      </ScrollView>
 
       {/* Betting Modal - shown when user wants to set/reset bet */}
       <BetModal
@@ -181,6 +196,12 @@ export const GameScreen: React.FC = () => {
         onCancel={() => setShowResetBalancesModal(false)}
         confirmButtonStyle="destructive"
       />
+
+      {/* Sound Settings Modal */}
+      <SoundSettingsModal
+        visible={showSoundSettingsModal}
+        onClose={() => setShowSoundSettingsModal(false)}
+      />
     </View>
   );
 };
@@ -190,19 +211,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0f',
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    justifyContent: 'space-between',
+    paddingTop: 20,
+    paddingBottom: 30,
+    minHeight: '100%',
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
     color: '#fffffe',
-    marginBottom: 8,
+    marginBottom: 16,
     letterSpacing: 1.5,
     textShadowColor: '#e94560',
     textShadowOffset: { width: 0, height: 2 },
@@ -213,8 +236,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#b8b9c4',
-    marginTop: 2,
-    marginBottom: 2,
+    marginTop: 8,
+    marginBottom: 8,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
@@ -236,15 +259,15 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    marginTop: 4,
-    gap: 10,
+    marginTop: 16,
+    gap: 12,
     justifyContent: 'center',
     width: '100%',
   },
   bottomButtonContainer: {
     width: '100%',
-    gap: 4,
-    marginTop: 2,
+    gap: 12,
+    marginTop: 16,
   },
   button: {
     backgroundColor: '#e94560',
@@ -275,6 +298,11 @@ const styles = StyleSheet.create({
     minWidth: '100%',
     shadowColor: '#ff6b35',
   },
+  soundButton: {
+    backgroundColor: '#4ecca3',
+    minWidth: '100%',
+    shadowColor: '#4ecca3',
+  },
   buttonText: {
     color: '#fff',
     fontSize: 14,
@@ -285,8 +313,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666',
     textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 24,
+    marginBottom: 8,
     letterSpacing: 0.3,
   },
   poweredByLink: {

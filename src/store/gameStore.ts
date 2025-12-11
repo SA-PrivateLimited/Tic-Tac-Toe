@@ -3,6 +3,20 @@ import { GameState, Player } from '../types/game';
 import { checkWinner, checkDraw, getEmptyBoard } from '../utils/gameLogic';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Import sound manager with error handling
+let playMoveSound: (() => void) = () => {
+  // Default no-op function
+};
+
+try {
+  const soundModule = require('../utils/soundManager');
+  if (soundModule && soundModule.playMoveSound) {
+    playMoveSound = soundModule.playMoveSound;
+  }
+} catch (error) {
+  console.log('Sound module not available:', error);
+}
+
 interface GameStore extends GameState {
   makeMove: (index: number) => void;
   resetGame: () => void;
@@ -52,6 +66,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
+
+    // Play sound (same sound for both players)
+    if (playMoveSound) {
+      try {
+        playMoveSound();
+      } catch (error) {
+        console.log('Error playing sound:', error);
+      }
+    }
 
     const gameWinner = checkWinner(newBoard);
     const isGameDraw = checkDraw(newBoard);

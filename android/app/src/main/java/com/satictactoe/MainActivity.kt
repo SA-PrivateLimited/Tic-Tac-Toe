@@ -1,5 +1,8 @@
 package com.satictactoe
 
+import android.os.Build
+import android.os.Bundle
+import androidx.core.view.WindowCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +22,17 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  /**
+   * Enable edge-to-edge display for Android 15+ compatibility
+   */
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    
+    // Enable edge-to-edge for Android 15+ (API 35+)
+    // This ensures proper display on Android 15 and later devices
+    if (Build.VERSION.SDK_INT >= 35) {
+      WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
+  }
 }

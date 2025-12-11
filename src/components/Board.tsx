@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 12,
+    marginVertical: 20,
   },
   board: {
     backgroundColor: '#1a1a2e',
