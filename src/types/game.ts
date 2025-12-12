@@ -1,3 +1,5 @@
+import { Achievement, Statistics, UnlockedAchievementNotification } from './achievements';
+
 export type Player = 'X' | 'O' | null;
 
 export type Board = Player[];
@@ -20,6 +22,12 @@ export interface GameState {
   };
   showBetModal: boolean;
   showWinnerModal: boolean;
+  // Achievement system fields
+  achievements: Achievement[];
+  statistics: Statistics;
+  unlockedNotifications: UnlockedAchievementNotification[];
+  gameStartTime: number | null;
+  previousScores: { X: number; O: number };
 }
 
 export interface GameStats {

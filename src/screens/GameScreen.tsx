@@ -7,6 +7,9 @@ import { WinnerModal } from '../components/WinnerModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SoundSettingsModal } from '../components/SoundSettingsModal';
 import { ThemeModal } from '../components/ThemeModal';
+import { AchievementsModal } from '../components/AchievementsModal';
+import { StatisticsModal } from '../components/StatisticsModal';
+import { AchievementNotification } from '../components/AchievementNotification';
 import { useGameStore } from '../store/gameStore';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -32,16 +35,28 @@ export const GameScreen: React.FC = () => {
     loadBalances,
     setShowBetModal,
     setShowWinnerModal,
+    // Achievement system state and methods
+    achievements,
+    statistics,
+    unlockedNotifications,
+    loadAchievements,
+    loadStatistics,
+    dismissNotification,
+    resetStatistics,
   } = useGameStore();
 
   const [showResetBalancesModal, setShowResetBalancesModal] = useState(false);
   const [showSoundSettingsModal, setShowSoundSettingsModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [showStatisticsModal, setShowStatisticsModal] = useState(false);
 
   useEffect(() => {
-    // Load scores and balances from AsyncStorage on mount
+    // Load scores, balances, achievements, and statistics from AsyncStorage on mount
     loadScores();
     loadBalances();
+    loadAchievements();
+    loadStatistics();
   }, []);
 
   const getStatusMessage = () => {
@@ -172,6 +187,14 @@ export const GameScreen: React.FC = () => {
       backgroundColor: theme.colors.playerO,
       marginBottom: 10,
     },
+    achievementsButton: {
+      backgroundColor: theme.colors.playerX,
+      marginBottom: 10,
+    },
+    statisticsButton: {
+      backgroundColor: theme.colors.buttonPrimary,
+      marginBottom: 10,
+    },
     resetBalancesButton: {
       backgroundColor: theme.colors.buttonDestructive,
       marginBottom: 10,
@@ -274,6 +297,22 @@ export const GameScreen: React.FC = () => {
             <Text style={styles.buttonText}>🎨 Theme</Text>
           </TouchableOpacity>
 
+          {/* Achievements button */}
+          <TouchableOpacity
+            style={[styles.button, styles.achievementsButton]}
+            onPress={() => setShowAchievementsModal(true)}
+          >
+            <Text style={styles.buttonText}>🏆 Achievements</Text>
+          </TouchableOpacity>
+
+          {/* Statistics button */}
+          <TouchableOpacity
+            style={[styles.button, styles.statisticsButton]}
+            onPress={() => setShowStatisticsModal(true)}
+          >
+            <Text style={styles.buttonText}>📊 Statistics</Text>
+          </TouchableOpacity>
+
           {/* Reset Balances button */}
           <TouchableOpacity
             style={[styles.button, styles.resetBalancesButton]}
@@ -330,123 +369,27 @@ export const GameScreen: React.FC = () => {
         visible={showThemeModal}
         onClose={() => setShowThemeModal(false)}
       />
+
+      {/* Achievements Modal */}
+      <AchievementsModal
+        visible={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        achievements={achievements}
+      />
+
+      {/* Statistics Modal */}
+      <StatisticsModal
+        visible={showStatisticsModal}
+        onClose={() => setShowStatisticsModal(false)}
+        statistics={statistics}
+        onResetStatistics={resetStatistics}
+      />
+
+      {/* Achievement Notification */}
+      <AchievementNotification
+        notification={unlockedNotifications[0] || null}
+        onDismiss={dismissNotification}
+      />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0f',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 30,
-    minHeight: '100%',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fffffe',
-    marginBottom: 16,
-    letterSpacing: 1.5,
-    textShadowColor: '#e94560',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
-    textTransform: 'uppercase',
-  },
-  status: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#b8b9c4',
-    marginTop: 8,
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  winnerStatus: {
-    color: '#4ecca3',
-    fontSize: 24,
-    fontWeight: '800',
-    textShadowColor: '#4ecca3',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  drawStatus: {
-    color: '#ffa500',
-    fontSize: 22,
-    fontWeight: '800',
-    textShadowColor: '#ffa500',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    marginTop: 16,
-    gap: 12,
-    justifyContent: 'center',
-    width: '100%',
-  },
-  bottomButtonContainer: {
-    width: '100%',
-    gap: 12,
-    marginTop: 16,
-  },
-  button: {
-    backgroundColor: '#e94560',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    minWidth: 120,
-    alignItems: 'center',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  resetButton: {
-    backgroundColor: '#1a237e',
-    shadowColor: '#1a237e',
-  },
-  setBetButton: {
-    backgroundColor: '#9b59b6',
-    minWidth: '100%',
-    shadowColor: '#9b59b6',
-  },
-  resetBalancesButton: {
-    backgroundColor: '#ff6b35',
-    minWidth: '100%',
-    shadowColor: '#ff6b35',
-  },
-  soundButton: {
-    backgroundColor: '#4ecca3',
-    minWidth: '100%',
-    shadowColor: '#4ecca3',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  poweredBy: {
-    fontSize: 11,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
-  poweredByLink: {
-    color: '#4ecca3',
-    fontWeight: '600',
-  },
-});

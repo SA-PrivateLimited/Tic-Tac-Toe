@@ -117,7 +117,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    backdropFilter: 'blur(4px)',
   },
   modalContainer: {
     backgroundColor: '#1a1a2e',
