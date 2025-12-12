@@ -275,6 +275,18 @@ export const GameScreen: React.FC = () => {
       color: theme.colors.playerX,
       fontWeight: '600',
     },
+    helpSupport: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      marginTop: 12,
+      textAlign: 'center',
+      opacity: 0.7,
+      lineHeight: 18,
+    },
+    contactLink: {
+      color: theme.colors.buttonPrimary,
+      fontWeight: '600',
+    },
   });
 
   return (
@@ -407,6 +419,14 @@ export const GameScreen: React.FC = () => {
         <Text style={styles.poweredBy}>
           Powered by{' '}
           <Text style={styles.poweredByLink}>sa-privateLimited.com</Text>
+        </Text>
+
+        {/* Help and Support */}
+        <Text style={styles.helpSupport}>
+          Help & Support:{'\n'}
+          <Text style={styles.contactLink}>support@sa-privatelimited.com</Text>
+          {'\n'}
+          <Text style={styles.contactLink}>+91 8210900726</Text>
         </Text>
       </ScrollView>
 
