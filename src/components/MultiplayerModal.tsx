@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { multiplayerService, ConnectionStatus } from '../services/multiplayerService';
+import { multiplayerService, ConnectionStatus, isMultiplayerAvailable } from '../services/multiplayerService';
 
 interface MultiplayerModalProps {
   visible: boolean;
@@ -29,10 +29,19 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   const [serverAddress, setServerAddress] = useState('');
   const [serverPort, setServerPort] = useState('8888');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
-  const [deviceIP, setDeviceIP] = useState('192.168.1.100');
+  const [deviceIP, setDeviceIP] = useState('10.0.2.2'); // Default to emulator host IP
 
   useEffect(() => {
     if (visible) {
+      // Check if multiplayer is available
+      if (!isMultiplayerAvailable()) {
+        Alert.alert(
+          'Multiplayer Not Available',
+          'The network module is not properly linked. Please rebuild the app:\n\n1. Stop Metro bundler\n2. cd android && ./gradlew clean\n3. cd .. && npm run android\n\nMultiplayer features will not work until the app is rebuilt.',
+          [{ text: 'OK' }]
+        );
+      }
+      
       // Get device IP (simplified - in production use proper method)
       multiplayerService.getDeviceIP().then(ip => {
         setDeviceIP(ip);
@@ -56,8 +65,8 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
         let errorMessage = error.message || 'Failed to connect.';
         
         // Provide helpful error messages
-        if (errorMessage.includes('createServer') || errorMessage.includes('null')) {
-          errorMessage = 'Network module not available. Please rebuild the app:\n\n1. Stop Metro bundler\n2. Run: cd android && ./gradlew clean\n3. Run: cd .. && npm run android';
+        if (errorMessage.includes('createServer') || errorMessage.includes('null') || errorMessage.includes('not properly linked')) {
+          errorMessage = 'Network module not available. The multiplayer feature requires the app to be rebuilt.\n\nPlease rebuild the app:\n1. Stop Metro bundler\n2. cd android && ./gradlew clean\n3. cd .. && npm run android\n\nOr use the development build.';
         }
         
         Alert.alert('Connection Error', errorMessage);
@@ -229,6 +238,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       marginTop: 4,
     },
     closeButton: {
+      marginBottom: 40,
       backgroundColor: theme.colors.buttonSecondary,
       borderRadius: 12,
       paddingVertical: 14,

@@ -3,21 +3,31 @@ import { Board, Player } from '../types/game';
 
 // Import TcpSocket with error handling
 let TcpSocket: any = null;
+let TcpSocketAvailable = false;
+
 try {
   const tcpModule = require('react-native-tcp-socket');
   TcpSocket = tcpModule.default || tcpModule;
   
   if (!TcpSocket) {
-    console.error('TcpSocket module is null or undefined');
+    console.error('TcpSocket module is null or undefined. The native module may not be linked.');
+    console.error('Please rebuild the app: cd android && ./gradlew clean && cd .. && npm run android');
   } else {
     console.log('TcpSocket loaded. Available methods:', Object.keys(TcpSocket));
     if (!TcpSocket.createServer) {
-      console.error('TcpSocket.createServer is not available');
+      console.error('TcpSocket.createServer is not available. The native module may not be properly linked.');
+      console.error('Please rebuild the app: cd android && ./gradlew clean && cd .. && npm run android');
+    } else {
+      TcpSocketAvailable = true;
     }
   }
 } catch (error) {
   console.error('Failed to load TcpSocket:', error);
+  console.error('Please ensure react-native-tcp-socket is installed and the app is rebuilt.');
 }
+
+// Export availability check
+export const isMultiplayerAvailable = () => TcpSocketAvailable;
 
 export type MultiplayerRole = 'host' | 'client' | null;
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -90,14 +100,26 @@ class MultiplayerService {
 
   // Get device IP address (simplified - in production, use a proper method)
   async getDeviceIP(): Promise<string> {
-    // For Android, we'll use a placeholder
-    // In production, use react-native-network-info or similar
-    return '192.168.1.100'; // This should be replaced with actual IP detection
+    // For Android emulators:
+    // - 10.0.2.2 is the special IP that refers to the host machine's localhost
+    // - For emulator-to-emulator communication, use 10.0.2.2 to connect to the host
+    // - The server on the host emulator listens on 0.0.0.0, accessible via 10.0.2.2 from other emulators
+    if (Platform.OS === 'android') {
+      return '10.0.2.2'; // Android emulator's way to access host machine
+    }
+    // For iOS or physical devices, you'd need actual IP detection
+    return '192.168.1.100'; // Fallback for physical devices
   }
 
   // Start hosting a game
   async startHosting(port: number = 8888): Promise<boolean> {
     try {
+      // Disconnect any existing connections first
+      this.disconnect();
+      
+      // Wait a moment for cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       this.state.role = 'host';
       this.state.status = 'connecting';
       this.state.serverPort = port;
@@ -107,54 +129,71 @@ class MultiplayerService {
 
       // Check if TcpSocket is available
       if (!TcpSocket) {
-        throw new Error('TcpSocket module is not available. Please ensure react-native-tcp-socket is properly installed and linked.');
+        const errorMsg = 'TcpSocket module is not available. Please ensure react-native-tcp-socket is properly installed and linked. You may need to rebuild the app.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
 
       if (typeof TcpSocket.createServer !== 'function') {
-        throw new Error('TcpSocket.createServer is not a function. The module may not be properly linked.');
+        const errorMsg = 'TcpSocket.createServer is not a function. The module may not be properly linked. Please rebuild the app.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
 
       // Create server with connection handler
-      const server = TcpSocket.createServer(
-        (socket: any) => {
-          console.log('Client connected');
-          this.state.clientSocket = socket;
-          this.state.status = 'connected';
-          this.emit('connected', { role: 'host' });
+      let server: any = null;
+      try {
+        server = TcpSocket.createServer(
+          (socket: any) => {
+            console.log('Client connected');
+            this.state.clientSocket = socket;
+            this.state.status = 'connected';
+            this.emit('connected', { role: 'host' });
 
-          socket.on('data', (data: any) => {
-            try {
-              const message: GameMessage = JSON.parse(data.toString());
-              this.handleMessage(message);
-            } catch (error) {
-              console.error('Error parsing message:', error);
-            }
-          });
+            socket.on('data', (data: any) => {
+              try {
+                const message: GameMessage = JSON.parse(data.toString());
+                this.handleMessage(message);
+              } catch (error) {
+                console.error('Error parsing message:', error);
+              }
+            });
 
-          socket.on('error', (error: any) => {
-            console.error('Socket error:', error);
-            this.emit('error', error);
-          });
+            socket.on('error', (error: any) => {
+              console.error('Socket error:', error);
+              this.emit('error', error);
+            });
 
-          socket.on('close', () => {
-            console.log('Client disconnected');
-            this.state.status = 'disconnected';
-            this.emit('disconnected', {});
-            this.disconnect();
-          });
-        }
-      );
+            socket.on('close', () => {
+              console.log('Client disconnected');
+              this.state.status = 'disconnected';
+              this.emit('disconnected', {});
+              this.disconnect();
+            });
+          }
+        );
+      } catch (createError: any) {
+        const errorMsg = `Failed to create server: ${createError.message}. The react-native-tcp-socket module may not be properly linked. Please rebuild the app.`;
+        console.error(errorMsg, createError);
+        throw new Error(errorMsg);
+      }
 
       // Check if server was created successfully
-      if (!server) {
-        throw new Error('Failed to create server - createServer returned null or undefined');
+      if (!server || server === null) {
+        const errorMsg = 'Failed to create server - createServer returned null. The react-native-tcp-socket native module is not properly linked. Please rebuild the app: cd android && ./gradlew clean && cd .. && npx react-native run-android';
+        console.error(errorMsg);
+        console.error('TcpSocket object:', TcpSocket);
+        console.error('TcpSocket methods:', TcpSocket ? Object.keys(TcpSocket) : 'TcpSocket is null');
+        throw new Error(errorMsg);
       }
 
       // Check if listen method exists
       if (typeof server.listen !== 'function') {
         console.error('Server object:', server);
-        console.error('Server methods:', Object.keys(server));
-        throw new Error('Server object does not have listen method. Available methods: ' + Object.keys(server).join(', '));
+        console.error('Server type:', typeof server);
+        console.error('Server methods:', server ? Object.keys(server) : 'server is null');
+        const errorMsg = `Server object does not have listen method. The native module may not be properly linked. Please rebuild the app. Available methods: ${server ? Object.keys(server).join(', ') : 'none'}`;
+        throw new Error(errorMsg);
       }
 
       // Store server reference before calling listen
@@ -170,8 +209,20 @@ class MultiplayerService {
       // Handle server errors
       server.on('error', (error: any) => {
         console.error('Server error:', error);
-        this.state.status = 'error';
-        this.emit('error', error);
+        const errorMessage = error.message || error.toString();
+        
+        // Handle port already in use error
+        if (errorMessage.includes('EADDRINUSE') || errorMessage.includes('Address already in use')) {
+          const errorMsg = `Port ${port} is already in use. Please wait a moment and try again, or use a different port.`;
+          console.error(errorMsg);
+          this.state.status = 'error';
+          this.emit('error', new Error(errorMsg));
+          // Clean up
+          this.disconnect();
+        } else {
+          this.state.status = 'error';
+          this.emit('error', error);
+        }
       });
 
       return true;
@@ -194,15 +245,41 @@ class MultiplayerService {
       this.state.opponentPlayer = 'X';
       this.state.isMyTurn = false;
 
-      const client = TcpSocket.createConnection(
-        { port, host: address },
-        () => {
-          console.log('Connected to server');
-          this.state.clientSocket = client;
-          this.state.status = 'connected';
-          this.emit('connected', { role: 'client' });
-        }
-      );
+      // Check if TcpSocket is available
+      if (!TcpSocket) {
+        const errorMsg = 'TcpSocket module is not available. Please ensure react-native-tcp-socket is properly installed and linked. You may need to rebuild the app.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      if (typeof TcpSocket.createConnection !== 'function') {
+        const errorMsg = 'TcpSocket.createConnection is not a function. The module may not be properly linked. Please rebuild the app.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      let client: any = null;
+      try {
+        client = TcpSocket.createConnection(
+          { port, host: address },
+          () => {
+            console.log('Connected to server');
+            this.state.clientSocket = client;
+            this.state.status = 'connected';
+            this.emit('connected', { role: 'client' });
+          }
+        );
+      } catch (createError: any) {
+        const errorMsg = `Failed to create client connection: ${createError.message}. The react-native-tcp-socket module may not be properly linked. Please rebuild the app.`;
+        console.error(errorMsg, createError);
+        throw new Error(errorMsg);
+      }
+
+      if (!client || client === null) {
+        const errorMsg = 'Failed to create client connection - createConnection returned null. The react-native-tcp-socket native module is not properly linked. Please rebuild the app.';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       client.on('data', (data: any) => {
         try {
@@ -316,7 +393,19 @@ class MultiplayerService {
   disconnect() {
     if (this.state.serverSocket) {
       try {
-        this.state.serverSocket.close();
+        // Remove all listeners before closing
+        if (this.state.serverSocket.removeAllListeners) {
+          this.state.serverSocket.removeAllListeners('error');
+          this.state.serverSocket.removeAllListeners('connection');
+        }
+        // Close the server
+        if (this.state.serverSocket.close) {
+          this.state.serverSocket.close();
+        }
+        // Destroy if available
+        if (this.state.serverSocket.destroy) {
+          this.state.serverSocket.destroy();
+        }
       } catch (error) {
         console.error('Error closing server:', error);
       }
@@ -325,7 +414,16 @@ class MultiplayerService {
 
     if (this.state.clientSocket) {
       try {
-        this.state.clientSocket.destroy();
+        // Remove all listeners before destroying
+        if (this.state.clientSocket.removeAllListeners) {
+          this.state.clientSocket.removeAllListeners('data');
+          this.state.clientSocket.removeAllListeners('error');
+          this.state.clientSocket.removeAllListeners('close');
+        }
+        // Destroy the client socket
+        if (this.state.clientSocket.destroy) {
+          this.state.clientSocket.destroy();
+        }
       } catch (error) {
         console.error('Error closing client:', error);
       }

@@ -1,7 +1,7 @@
 package com.satictactoe
 
-import android.os.Build
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -24,15 +24,12 @@ class MainActivity : ReactActivity() {
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   /**
-   * Enable edge-to-edge display for Android 15+ compatibility
+   * Enable edge-to-edge display for Android 15+ compatibility with backward compatibility
    */
   override fun onCreate(savedInstanceState: Bundle?) {
+    // Enable edge-to-edge for all Android versions (with backward compatibility)
+    // This ensures proper display on Android 15 and later devices, and works on earlier versions too
+    enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    
-    // Enable edge-to-edge for Android 15+ (API 35+)
-    // This ensures proper display on Android 15 and later devices
-    if (Build.VERSION.SDK_INT >= 35) {
-      WindowCompat.setDecorFitsSystemWindows(window, false)
-    }
   }
 }
