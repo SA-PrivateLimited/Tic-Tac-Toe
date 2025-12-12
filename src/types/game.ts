@@ -1,11 +1,16 @@
 import { Achievement, Statistics, UnlockedAchievementNotification } from './achievements';
+import { AIDifficulty } from '../utils/aiPlayer';
 
 export type Player = 'X' | 'O' | null;
 
 export type Board = Player[];
 
+export type GameMode = 'pvp' | 'ai' | 'multiplayer';
+export type BoardSize = 3 | 4 | 5;
+
 export interface GameState {
   board: Board;
+  boardSize: BoardSize;
   currentPlayer: Player;
   winner: Player;
   isDraw: boolean;
@@ -28,6 +33,11 @@ export interface GameState {
   unlockedNotifications: UnlockedAchievementNotification[];
   gameStartTime: number | null;
   previousScores: { X: number; O: number };
+  // AI system fields
+  gameMode: GameMode;
+  aiDifficulty: AIDifficulty;
+  aiPlayer: Player | null; // Which player is AI (X or O)
+  humanPlayer: Player; // Which player is human (X or O)
 }
 
 export interface GameStats {

@@ -1,10 +1,12 @@
 import { create } from 'zustand';
-import { GameState, Player } from '../types/game';
+import { GameState, Player, GameMode, BoardSize } from '../types/game';
 import { checkWinner, checkDraw, getEmptyBoard } from '../utils/gameLogic';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AchievementId } from '../types/achievements';
 import { initializeAchievements } from '../data/achievementDefinitions';
 import { checkAchievements, updateAchievementProgress } from '../utils/achievementChecker';
+import { getAIMove, isAITurn, AIDifficulty } from '../utils/aiPlayer';
+import { multiplayerService } from '../services/multiplayerService';
 
 // Import sound manager with error handling
 let playMoveSound: (() => void) = () => {
@@ -38,6 +40,16 @@ interface GameStore extends GameState {
   checkAndUnlockAchievements: () => void;
   dismissNotification: () => void;
   resetStatistics: () => void;
+  // AI system methods
+  setGameMode: (mode: GameMode, aiDifficulty?: AIDifficulty, humanPlayer?: Player) => void;
+  makeAIMove: () => void;
+  // Multiplayer system methods
+  setMultiplayerMode: (enabled: boolean) => void;
+  handleMultiplayerMove: (index: number, player: Player) => void;
+  syncMultiplayerState: () => void;
+  // Board size methods
+  setBoardSize: (size: BoardSize) => void;
+  loadBoardSize: () => Promise<void>;
 }
 
 const SCORES_KEY = '@tictactoe_scores';
@@ -45,9 +57,13 @@ const BALANCES_KEY = '@tictactoe_balances';
 const BET_AMOUNT_KEY = '@tictactoe_bet_amount';
 const ACHIEVEMENTS_KEY = '@tictactoe_achievements';
 const STATISTICS_KEY = '@tictactoe_statistics';
+const GAME_MODE_KEY = '@tictactoe_game_mode';
+const AI_DIFFICULTY_KEY = '@tictactoe_ai_difficulty';
+const BOARD_SIZE_KEY = '@tictactoe_board_size';
 
 const initialState: GameState = {
-  board: getEmptyBoard(),
+  board: getEmptyBoard(3),
+  boardSize: 3,
   currentPlayer: 'X',
   winner: null,
   isDraw: false,
@@ -85,6 +101,11 @@ const initialState: GameState = {
   unlockedNotifications: [],
   gameStartTime: null,
   previousScores: { X: 0, O: 0 },
+  // AI system initial state
+  gameMode: 'pvp',
+  aiDifficulty: 'medium',
+  aiPlayer: null,
+  humanPlayer: 'X',
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -114,8 +135,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
-    const gameWinner = checkWinner(newBoard);
-    const isGameDraw = checkDraw(newBoard);
+    const boardSize = get().boardSize;
+    const gameWinner = checkWinner(newBoard, boardSize);
+    const isGameDraw = checkDraw(newBoard, boardSize);
 
     const newScores = { ...get().scores };
     const newBalances = { ...get().playerBalances };
@@ -152,6 +174,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newStatistics.longestStreak = newStatistics.currentStreak;
       }
 
+      // Track AI game statistics
+      const state = get();
+      if (state.gameMode === 'ai') {
+        newStatistics.aiGamesPlayed++;
+        const humanWon = gameWinner === state.humanPlayer;
+        if (humanWon) {
+          newStatistics.aiLosses[state.aiDifficulty]++;
+        } else {
+          newStatistics.aiWins[state.aiDifficulty]++;
+        }
+      }
+
       // Track fastest win
       const gameTime = get().gameStartTime
         ? Math.floor((Date.now() - get().gameStartTime!) / 1000)
@@ -170,13 +204,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newStatistics.gamesPlayed++;
       newStatistics.totalDraws++;
       newStatistics.currentStreak = 0; // Reset streak on draw
+      
+      // Track AI game statistics
+      const state = get();
+      if (state.gameMode === 'ai') {
+        newStatistics.aiGamesPlayed++;
+      }
+      
       AsyncStorage.setItem(STATISTICS_KEY, JSON.stringify(newStatistics));
       shouldCheckAchievements = true;
     }
 
+    const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    
     set({
       board: newBoard,
-      currentPlayer: currentPlayer === 'X' ? 'O' : 'X',
+      currentPlayer: nextPlayer,
       winner: gameWinner,
       isDraw: isGameDraw,
       scores: newScores,
@@ -191,17 +234,44 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (shouldCheckAchievements) {
       get().checkAndUnlockAchievements();
     }
+
+    // If game is not over and it's AI's turn, make AI move
+    if (!gameWinner && !isGameDraw) {
+      const state = get();
+      if (state.gameMode === 'ai' && isAITurn(nextPlayer, state.aiPlayer)) {
+        // Small delay to make AI move feel more natural
+        setTimeout(() => {
+          get().makeAIMove();
+        }, 500);
+      }
+    }
+
+    // If multiplayer mode, send move to opponent
+    if (get().gameMode === 'multiplayer') {
+      multiplayerService.sendMove(index);
+      multiplayerService.sendSync(newBoard, nextPlayer, gameWinner, isGameDraw);
+    }
   },
 
   resetGame: () => {
+    const state = get();
+    const startingPlayer = state.gameMode === 'ai' && state.aiPlayer === 'X' ? 'X' : 'X';
+    
     set({
-      board: getEmptyBoard(),
-      currentPlayer: 'X',
+      board: getEmptyBoard(state.boardSize),
+      currentPlayer: startingPlayer,
       winner: null,
       isDraw: false,
       showWinnerModal: false,
       gameStartTime: null,
     });
+
+    // If AI goes first, make AI move
+    if (state.gameMode === 'ai' && state.aiPlayer === 'X') {
+      setTimeout(() => {
+        get().makeAIMove();
+      }, 500);
+    }
   },
 
   resetScores: () => {
@@ -295,6 +365,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const statistics = JSON.parse(statisticsJson);
         set({ statistics });
       }
+      // Load game mode and AI difficulty
+      const gameModeJson = await AsyncStorage.getItem(GAME_MODE_KEY);
+      const aiDifficultyJson = await AsyncStorage.getItem(AI_DIFFICULTY_KEY);
+      if (gameModeJson) {
+        const gameMode = JSON.parse(gameModeJson) as GameMode;
+        const aiDifficulty = aiDifficultyJson ? (JSON.parse(aiDifficultyJson) as AIDifficulty) : 'medium';
+        const humanPlayer: Player = 'X';
+        const aiPlayer: Player = gameMode === 'ai' ? (humanPlayer === 'X' ? 'O' : 'X') : null;
+        set({
+          gameMode,
+          aiDifficulty,
+          aiPlayer,
+          humanPlayer,
+        });
+      }
     } catch (error) {
       // Ignore errors
     }
@@ -384,5 +469,129 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
     AsyncStorage.setItem(STATISTICS_KEY, JSON.stringify(newStatistics));
     set({ statistics: newStatistics });
+  },
+
+  // Set game mode (PvP or AI) and configure AI
+  setGameMode: (mode: GameMode, aiDifficulty: AIDifficulty = 'medium', humanPlayer: Player = 'X') => {
+    const aiPlayer: Player = humanPlayer === 'X' ? 'O' : 'X';
+    
+    AsyncStorage.setItem(GAME_MODE_KEY, mode);
+    AsyncStorage.setItem(AI_DIFFICULTY_KEY, aiDifficulty);
+    
+    set({
+      gameMode: mode,
+      aiDifficulty,
+      aiPlayer: mode === 'ai' ? aiPlayer : null,
+      humanPlayer,
+    });
+
+    // Reset game when changing mode
+    get().resetGame();
+  },
+
+  // Make AI move (only for 3×3 boards)
+  makeAIMove: () => {
+    const state = get();
+    const { board, aiPlayer, aiDifficulty, winner, isDraw, currentPlayer, boardSize } = state;
+
+    // AI only works for 3×3 boards
+    if (boardSize !== 3) {
+      return;
+    }
+
+    if (!aiPlayer || winner || isDraw || currentPlayer !== aiPlayer) {
+      return;
+    }
+
+    const aiMove = getAIMove(board, aiPlayer, aiDifficulty, boardSize);
+    const maxIndex = boardSize * boardSize;
+    if (aiMove >= 0 && aiMove < maxIndex && board[aiMove] === null) {
+      get().makeMove(aiMove);
+    }
+  },
+
+  // Set multiplayer mode
+  setMultiplayerMode: (enabled: boolean) => {
+    if (enabled) {
+      set({ gameMode: 'multiplayer' });
+      // Setup multiplayer listeners
+      multiplayerService.on('move', (data: { index: number; player: Player }) => {
+        get().handleMultiplayerMove(data.index, data.player);
+      });
+      multiplayerService.on('reset', () => {
+        get().resetGame();
+      });
+      multiplayerService.on('sync', (data: any) => {
+        set({
+          board: data.board || get().board,
+          currentPlayer: data.currentPlayer || get().currentPlayer,
+          winner: data.winner !== undefined ? data.winner : get().winner,
+          isDraw: data.isDraw !== undefined ? data.isDraw : get().isDraw,
+        });
+      });
+    } else {
+      multiplayerService.disconnect();
+      set({ gameMode: 'pvp' });
+    }
+  },
+
+  // Handle multiplayer move from opponent
+  handleMultiplayerMove: (index: number, player: Player) => {
+    const state = get();
+    if (state.gameMode === 'multiplayer' && state.currentPlayer === player) {
+      get().makeMove(index);
+    }
+  },
+
+  // Sync multiplayer state
+  syncMultiplayerState: () => {
+    const state = get();
+    if (state.gameMode === 'multiplayer') {
+      multiplayerService.sendSync(
+        state.board,
+        state.currentPlayer,
+        state.winner,
+        state.isDraw
+      );
+    }
+  },
+
+  // Set board size
+  setBoardSize: (size: BoardSize) => {
+    const currentState = get();
+    
+    // If switching away from 3×3 and AI mode is active, switch to PvP
+    if (size !== 3 && currentState.gameMode === 'ai') {
+      set({
+        gameMode: 'pvp',
+        aiPlayer: null,
+      });
+    }
+    
+    AsyncStorage.setItem(BOARD_SIZE_KEY, JSON.stringify(size));
+    set({
+      boardSize: size,
+      board: getEmptyBoard(size),
+      currentPlayer: 'X',
+      winner: null,
+      isDraw: false,
+      gameStartTime: null,
+    });
+  },
+
+  // Load board size from storage
+  loadBoardSize: async () => {
+    try {
+      const boardSizeJson = await AsyncStorage.getItem(BOARD_SIZE_KEY);
+      if (boardSizeJson) {
+        const boardSize = JSON.parse(boardSizeJson) as BoardSize;
+        set({
+          boardSize,
+          board: getEmptyBoard(boardSize),
+        });
+      }
+    } catch (error) {
+      // Ignore errors, use default size 3
+    }
   },
 }));

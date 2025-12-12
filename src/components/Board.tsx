@@ -1,25 +1,34 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Cell } from './Cell';
-import { Player } from '../types/game';
+import { Player, BoardSize } from '../types/game';
 import { getWinningLine } from '../utils/gameLogic';
 import { useTheme } from '../theme/ThemeContext';
 
 interface BoardProps {
   board: Player[];
+  boardSize: BoardSize;
   onCellPress: (index: number) => void;
   disabled: boolean;
 }
 
-export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) => {
+export const Board: React.FC<BoardProps> = ({ board, boardSize, onCellPress, disabled }) => {
   const { theme } = useTheme();
-  const winningLine = getWinningLine(board);
+  const winningLine = getWinningLine(board, boardSize);
 
-  // Split board into rows of 3
+  // Split board into rows based on board size
   const rows = [];
-  for (let i = 0; i < 9; i += 3) {
-    rows.push(board.slice(i, i + 3));
+  for (let i = 0; i < board.length; i += boardSize) {
+    rows.push(board.slice(i, i + boardSize));
   }
+  
+  // Calculate cell size based on board size and screen width
+  const screenWidth = Dimensions.get('window').width;
+  const padding = 24; // Board padding
+  const cellSpacing = 8; // Space between cells
+  const availableWidth = screenWidth - padding * 2;
+  const totalSpacing = cellSpacing * (boardSize - 1);
+  const cellSize = Math.floor((availableWidth - totalSpacing) / boardSize);
 
   const styles = StyleSheet.create({
     container: {
@@ -41,7 +50,7 @@ export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) =>
     },
     row: {
       flexDirection: 'row',
-      marginBottom: 8,
+      marginBottom: cellSpacing,
     },
     lastRow: {
       marginBottom: 0,
@@ -52,9 +61,9 @@ export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) =>
     <View style={styles.container}>
       <View style={styles.board}>
         {rows.map((row, rowIndex) => (
-          <View key={rowIndex} style={[styles.row, rowIndex === 2 && styles.lastRow]}>
+          <View key={rowIndex} style={[styles.row, rowIndex === rows.length - 1 && styles.lastRow]}>
             {row.map((cell, colIndex) => {
-              const index = rowIndex * 3 + colIndex;
+              const index = rowIndex * boardSize + colIndex;
               return (
                 <Cell
                   key={index}
@@ -62,6 +71,7 @@ export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) =>
                   onPress={() => onCellPress(index)}
                   disabled={disabled || cell !== null}
                   isWinning={winningLine?.includes(index) || false}
+                  size={cellSize}
                 />
               );
             })}

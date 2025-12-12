@@ -8,15 +8,19 @@ interface CellProps {
   onPress: () => void;
   disabled: boolean;
   isWinning: boolean;
+  size?: number;
 }
 
-export const Cell: React.FC<CellProps> = ({ value, onPress, disabled, isWinning }) => {
+export const Cell: React.FC<CellProps> = ({ value, onPress, disabled, isWinning, size = 100 }) => {
   const { theme } = useTheme();
+  
+  // Calculate font size based on cell size
+  const fontSize = Math.floor(size * 0.56);
 
   const styles = StyleSheet.create({
     cell: {
-      width: 100,
-      height: 100,
+      width: size,
+      height: size,
       marginRight: 8,
       backgroundColor: theme.colors.cellBackground,
       borderRadius: 12,
@@ -41,7 +45,7 @@ export const Cell: React.FC<CellProps> = ({ value, onPress, disabled, isWinning 
       transform: [{ scale: 1.05 }],
     },
     cellText: {
-      fontSize: 56,
+      fontSize: fontSize,
       fontWeight: '800',
       textShadowColor: 'rgba(0, 0, 0, 0.3)',
       textShadowOffset: { width: 0, height: 2 },

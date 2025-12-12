@@ -10,8 +10,13 @@ import { ThemeModal } from '../components/ThemeModal';
 import { AchievementsModal } from '../components/AchievementsModal';
 import { StatisticsModal } from '../components/StatisticsModal';
 import { AchievementNotification } from '../components/AchievementNotification';
+import { GameModeModal } from '../components/GameModeModal';
+import { MultiplayerModal } from '../components/MultiplayerModal';
+import { BoardSizeModal } from '../components/BoardSizeModal';
 import { useGameStore } from '../store/gameStore';
 import { useTheme } from '../theme/ThemeContext';
+import { isAITurn } from '../utils/aiPlayer';
+import { multiplayerService } from '../services/multiplayerService';
 
 export const GameScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -43,6 +48,20 @@ export const GameScreen: React.FC = () => {
     loadStatistics,
     dismissNotification,
     resetStatistics,
+    // AI system state and methods
+    gameMode,
+    aiDifficulty,
+    aiPlayer,
+    humanPlayer,
+    setGameMode,
+    // Multiplayer system methods
+    setMultiplayerMode,
+    handleMultiplayerMove,
+    syncMultiplayerState,
+    // Board size methods
+    boardSize,
+    setBoardSize,
+    loadBoardSize,
   } = useGameStore();
 
   const [showResetBalancesModal, setShowResetBalancesModal] = useState(false);
@@ -50,26 +69,57 @@ export const GameScreen: React.FC = () => {
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showStatisticsModal, setShowStatisticsModal] = useState(false);
+  const [showGameModeModal, setShowGameModeModal] = useState(false);
+  const [showMultiplayerModal, setShowMultiplayerModal] = useState(false);
+  const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
 
   useEffect(() => {
-    // Load scores, balances, achievements, and statistics from AsyncStorage on mount
+    // Load scores, balances, achievements, statistics, and board size from AsyncStorage on mount
     loadScores();
     loadBalances();
     loadAchievements();
     loadStatistics();
+    loadBoardSize();
   }, []);
 
   const getStatusMessage = () => {
     if (winner) {
+      if (gameMode === 'ai' && winner === humanPlayer) {
+        return 'You Win! 🎉';
+      } else if (gameMode === 'ai' && winner === aiPlayer) {
+        return 'AI Wins! 🤖';
+      } else if (gameMode === 'multiplayer') {
+        const myPlayer = multiplayerService.getMyPlayer();
+        if (winner === myPlayer) {
+          return 'You Win! 🎉';
+        } else {
+          return 'Opponent Wins!';
+        }
+      }
       return `Player ${winner} Wins!`;
     }
     if (isDraw) {
       return "It's a Draw!";
     }
+    if (gameMode === 'ai' && isAITurn(currentPlayer, aiPlayer)) {
+      return 'AI is thinking...';
+    } else if (gameMode === 'ai' && currentPlayer === humanPlayer) {
+      return 'Your Turn';
+    } else if (gameMode === 'multiplayer') {
+      const myPlayer = multiplayerService.getMyPlayer();
+      if (currentPlayer === myPlayer) {
+        return 'Your Turn';
+      } else {
+        return 'Waiting for opponent...';
+      }
+    }
     return `Player ${currentPlayer}'s Turn`;
   };
 
   const isGameOver = winner !== null || isDraw;
+  const isAITurnNow = gameMode === 'ai' && isAITurn(currentPlayer, aiPlayer);
+  const isMultiplayerTurn = gameMode === 'multiplayer' && 
+    currentPlayer !== multiplayerService.getMyPlayer();
 
   // Handler for confirming bet amount
   const handleBetConfirm = (amount: number) => {
@@ -187,16 +237,24 @@ export const GameScreen: React.FC = () => {
       backgroundColor: theme.colors.playerO,
       marginBottom: 10,
     },
+    gameModeButton: {
+      backgroundColor: theme.colors.buttonPrimary,
+      marginBottom: 10,
+    },
+    multiplayerButton: {
+      backgroundColor: theme.colors.buttonPrimary,
+      marginBottom: 10,
+    },
+    boardSizeButton: {
+      backgroundColor: theme.colors.buttonSecondary,
+      marginBottom: 10,
+    },
     achievementsButton: {
       backgroundColor: theme.colors.playerX,
       marginBottom: 10,
     },
     statisticsButton: {
       backgroundColor: theme.colors.buttonPrimary,
-      marginBottom: 10,
-    },
-    resetBalancesButton: {
-      backgroundColor: theme.colors.buttonDestructive,
       marginBottom: 10,
     },
     buttonText: {
@@ -250,8 +308,9 @@ export const GameScreen: React.FC = () => {
 
         <Board
           board={board}
+          boardSize={boardSize}
           onCellPress={makeMove}
-          disabled={isGameOver}
+          disabled={isGameOver || isAITurnNow || isMultiplayerTurn}
         />
 
         <View style={styles.buttonContainer}>
@@ -271,6 +330,36 @@ export const GameScreen: React.FC = () => {
         </View>
 
         <View style={styles.bottomButtonContainer}>
+          {/* Game Mode button */}
+          <TouchableOpacity
+            style={[styles.button, styles.gameModeButton]}
+            onPress={() => setShowGameModeModal(true)}
+          >
+            <Text style={styles.buttonText}>
+              {gameMode === 'ai' 
+                ? `🤖 AI (${aiDifficulty})` 
+                : gameMode === 'multiplayer'
+                ? '🌐 Multiplayer'
+                : '👥 PvP'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Multiplayer button */}
+          <TouchableOpacity
+            style={[styles.button, styles.multiplayerButton]}
+            onPress={() => setShowMultiplayerModal(true)}
+          >
+            <Text style={styles.buttonText}>🌐 Play Online</Text>
+          </TouchableOpacity>
+
+          {/* Board Size button */}
+          <TouchableOpacity
+            style={[styles.button, styles.boardSizeButton]}
+            onPress={() => setShowBoardSizeModal(true)}
+          >
+            <Text style={styles.buttonText}>📐 {boardSize}×{boardSize}</Text>
+          </TouchableOpacity>
+
           {/* Set/Reset Bet Amount button */}
           <TouchableOpacity
             style={[styles.button, styles.setBetButton]}
@@ -311,14 +400,6 @@ export const GameScreen: React.FC = () => {
             onPress={() => setShowStatisticsModal(true)}
           >
             <Text style={styles.buttonText}>📊 Statistics</Text>
-          </TouchableOpacity>
-
-          {/* Reset Balances button */}
-          <TouchableOpacity
-            style={[styles.button, styles.resetBalancesButton]}
-            onPress={handleResetBalances}
-          >
-            <Text style={styles.buttonText}>Reset Points</Text>
           </TouchableOpacity>
         </View>
 
@@ -389,6 +470,39 @@ export const GameScreen: React.FC = () => {
       <AchievementNotification
         notification={unlockedNotifications[0] || null}
         onDismiss={dismissNotification}
+      />
+
+      {/* Game Mode Modal */}
+      <GameModeModal
+        visible={showGameModeModal}
+        onClose={() => setShowGameModeModal(false)}
+        currentMode={gameMode}
+        currentDifficulty={aiDifficulty}
+        boardSize={boardSize}
+        onSelectMode={setGameMode}
+      />
+
+      {/* Multiplayer Modal */}
+      <MultiplayerModal
+        visible={showMultiplayerModal}
+        onClose={() => {
+          setShowMultiplayerModal(false);
+          if (gameMode === 'multiplayer') {
+            setMultiplayerMode(false);
+          }
+        }}
+        onConnected={() => {
+          setMultiplayerMode(true);
+          setShowMultiplayerModal(false);
+        }}
+      />
+
+      {/* Board Size Modal */}
+      <BoardSizeModal
+        visible={showBoardSizeModal}
+        onClose={() => setShowBoardSizeModal(false)}
+        currentSize={boardSize}
+        onSelectSize={setBoardSize}
       />
     </View>
   );
