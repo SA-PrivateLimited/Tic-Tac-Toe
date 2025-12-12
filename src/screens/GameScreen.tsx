@@ -6,9 +6,12 @@ import { BetModal } from '../components/BetModal';
 import { WinnerModal } from '../components/WinnerModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { SoundSettingsModal } from '../components/SoundSettingsModal';
+import { ThemeModal } from '../components/ThemeModal';
 import { useGameStore } from '../store/gameStore';
+import { useTheme } from '../theme/ThemeContext';
 
 export const GameScreen: React.FC = () => {
+  const { theme } = useTheme();
   const {
     board,
     currentPlayer,
@@ -33,6 +36,7 @@ export const GameScreen: React.FC = () => {
 
   const [showResetBalancesModal, setShowResetBalancesModal] = useState(false);
   const [showSoundSettingsModal, setShowSoundSettingsModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     // Load scores and balances from AsyncStorage on mount
@@ -81,6 +85,116 @@ export const GameScreen: React.FC = () => {
     resetBalances();
     setShowResetBalancesModal(false);
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    content: {
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 30,
+      minHeight: '100%',
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: '800',
+      color: theme.colors.textPrimary,
+      marginBottom: 16,
+      letterSpacing: 1.5,
+      textShadowColor: theme.colors.buttonPrimary,
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 10,
+      textTransform: 'uppercase',
+    },
+    status: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.textSecondary,
+      marginTop: 8,
+      marginBottom: 8,
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+    winnerStatus: {
+      color: theme.colors.playerO,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    drawStatus: {
+      color: theme.colors.textSecondary,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+      paddingHorizontal: 16,
+      marginTop: 20,
+      marginBottom: 12,
+    },
+    button: {
+      flex: 1,
+      backgroundColor: theme.colors.buttonPrimary,
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 10,
+      marginHorizontal: 6,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      elevation: 5,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    resetButton: {
+      backgroundColor: theme.colors.buttonDestructive,
+    },
+    bottomButtonContainer: {
+      width: '100%',
+      paddingHorizontal: 16,
+      marginTop: 8,
+    },
+    setBetButton: {
+      backgroundColor: theme.colors.buttonSecondary,
+      marginBottom: 10,
+    },
+    soundButton: {
+      backgroundColor: theme.colors.buttonPrimary,
+      marginBottom: 10,
+    },
+    themeButton: {
+      backgroundColor: theme.colors.playerO,
+      marginBottom: 10,
+    },
+    resetBalancesButton: {
+      backgroundColor: theme.colors.buttonDestructive,
+      marginBottom: 10,
+    },
+    buttonText: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+    poweredBy: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      marginTop: 20,
+      textAlign: 'center',
+      opacity: 0.6,
+    },
+    poweredByLink: {
+      color: theme.colors.playerX,
+      fontWeight: '600',
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -152,6 +266,14 @@ export const GameScreen: React.FC = () => {
             <Text style={styles.buttonText}>🎵 Sound Settings</Text>
           </TouchableOpacity>
 
+          {/* Theme button */}
+          <TouchableOpacity
+            style={[styles.button, styles.themeButton]}
+            onPress={() => setShowThemeModal(true)}
+          >
+            <Text style={styles.buttonText}>🎨 Theme</Text>
+          </TouchableOpacity>
+
           {/* Reset Balances button */}
           <TouchableOpacity
             style={[styles.button, styles.resetBalancesButton]}
@@ -201,6 +323,12 @@ export const GameScreen: React.FC = () => {
       <SoundSettingsModal
         visible={showSoundSettingsModal}
         onClose={() => setShowSoundSettingsModal(false)}
+      />
+
+      {/* Theme Modal */}
+      <ThemeModal
+        visible={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
       />
     </View>
   );

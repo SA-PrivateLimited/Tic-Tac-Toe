@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 interface ScoreBoardProps {
   xScore: number;
@@ -19,6 +20,127 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   oBalance,
   betAmount,
 }) => {
+  const { theme } = useTheme();
+
+  const styles = StyleSheet.create({
+    // Bet amount display
+    betContainer: {
+      alignSelf: 'center',
+      backgroundColor: theme.colors.buttonPrimary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      marginBottom: 12,
+      borderWidth: 2,
+      borderColor: theme.colors.textPrimary,
+      shadowColor: theme.colors.buttonPrimary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    betLabel: {
+      fontSize: 10,
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
+      marginBottom: 2,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      opacity: 0.9,
+    },
+    betAmount: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+
+    // Player balances
+    balanceContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+      paddingHorizontal: 10,
+      marginBottom: 12,
+    },
+    balanceItem: {
+      flex: 1,
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginHorizontal: 4,
+      borderWidth: 2,
+      borderColor: theme.colors.cellBorder,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    balanceLabel: {
+      fontSize: 9,
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
+      textAlign: 'center',
+      fontWeight: '600',
+      letterSpacing: 0.3,
+    },
+    balanceValue: {
+      fontSize: 18,
+      fontWeight: '800',
+      textAlign: 'center',
+      letterSpacing: 0.5,
+    },
+
+    // Score display
+    container: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+      paddingHorizontal: 10,
+      marginBottom: 8,
+    },
+    scoreItem: {
+      alignItems: 'center',
+      backgroundColor: theme.colors.cellBackground,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      minWidth: 80,
+      flex: 1,
+      marginHorizontal: 4,
+      borderWidth: 2,
+      borderColor: theme.colors.cellBorder,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 5,
+      elevation: 4,
+    },
+    scoreLabel: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+    },
+    scoreValue: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: theme.colors.textPrimary,
+      letterSpacing: 0.5,
+    },
+    xColor: {
+      color: theme.colors.playerX,
+    },
+    oColor: {
+      color: theme.colors.playerO,
+    },
+  });
+
   return (
     <View>
       {/* Display current points if set */}
@@ -59,122 +181,3 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  // Bet amount display
-  betContainer: {
-    alignSelf: 'center',
-    backgroundColor: '#e94560',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#e94560',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  betLabel: {
-    fontSize: 10,
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 2,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    opacity: 0.9,
-  },
-  betAmount: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-
-  // Player balances
-  balanceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-  balanceItem: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#0f0e17',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginHorizontal: 4,
-    borderWidth: 2,
-    borderColor: '#2a3a5a',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  balanceLabel: {
-    fontSize: 9,
-    color: '#888',
-    marginBottom: 4,
-    textAlign: 'center',
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  balanceValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-
-  // Score display
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingHorizontal: 10,
-    marginBottom: 8,
-  },
-  scoreItem: {
-    alignItems: 'center',
-    backgroundColor: '#16213e',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    minWidth: 80,
-    flex: 1,
-    marginHorizontal: 4,
-    borderWidth: 2,
-    borderColor: '#2a3a5a',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  scoreLabel: {
-    fontSize: 11,
-    color: '#aaa',
-    marginBottom: 4,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  scoreValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  xColor: {
-    color: '#e94560',
-  },
-  oColor: {
-    color: '#4ecca3',
-  },
-});

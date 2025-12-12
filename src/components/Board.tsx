@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Cell } from './Cell';
 import { Player } from '../types/game';
 import { getWinningLine } from '../utils/gameLogic';
+import { useTheme } from '../theme/ThemeContext';
 
 interface BoardProps {
   board: Player[];
@@ -11,6 +12,7 @@ interface BoardProps {
 }
 
 export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) => {
+  const { theme } = useTheme();
   const winningLine = getWinningLine(board);
 
   // Split board into rows of 3
@@ -18,6 +20,33 @@ export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) =>
   for (let i = 0; i < 9; i += 3) {
     rows.push(board.slice(i, i + 3));
   }
+
+  const styles = StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginVertical: 20,
+    },
+    board: {
+      backgroundColor: theme.colors.boardBackground,
+      borderRadius: 16,
+      padding: 12,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 10,
+      borderWidth: 2.5,
+      borderColor: theme.colors.modalBorder,
+    },
+    row: {
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+    lastRow: {
+      marginBottom: 0,
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -42,30 +71,3 @@ export const Board: React.FC<BoardProps> = ({ board, onCellPress, disabled }) =>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 20,
-  },
-  board: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 16,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-    borderWidth: 2.5,
-    borderColor: '#2a2a3e',
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  lastRow: {
-    marginBottom: 0,
-  },
-});
