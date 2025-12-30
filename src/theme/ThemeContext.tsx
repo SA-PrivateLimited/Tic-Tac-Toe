@@ -36,7 +36,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.log('Error loading theme:', error);
+      // Error loading theme
     } finally {
       setIsLoading(false);
     }
@@ -46,9 +46,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(newThemeId));
       setThemeId(newThemeId);
-      console.log(`✅ Theme changed to: ${newThemeId}`);
+      // Theme changed
     } catch (error) {
-      console.log('Error saving theme:', error);
+      // Error saving theme
     }
   };
 

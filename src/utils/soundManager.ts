@@ -7,7 +7,7 @@ let SoundPlayerModule: any = null;
 try {
   SoundPlayerModule = NativeModules.SoundPlayerModule;
 } catch (e) {
-  console.log('SoundPlayerModule not available:', e);
+  // SoundPlayerModule not available
 }
 
 // Sound file names mapping for instruments

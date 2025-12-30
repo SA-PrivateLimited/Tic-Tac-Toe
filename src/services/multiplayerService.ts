@@ -10,20 +10,16 @@ try {
   TcpSocket = tcpModule.default || tcpModule;
   
   if (!TcpSocket) {
-    console.error('TcpSocket module is null or undefined. The native module may not be linked.');
-    console.error('Please rebuild the app: cd android && ./gradlew clean && cd .. && npm run android');
+    // TcpSocket module not available
   } else {
-    console.log('TcpSocket loaded. Available methods:', Object.keys(TcpSocket));
     if (!TcpSocket.createServer) {
-      console.error('TcpSocket.createServer is not available. The native module may not be properly linked.');
-      console.error('Please rebuild the app: cd android && ./gradlew clean && cd .. && npm run android');
+      // TcpSocket.createServer not available
     } else {
       TcpSocketAvailable = true;
     }
   }
 } catch (error) {
-  console.error('Failed to load TcpSocket:', error);
-  console.error('Please ensure react-native-tcp-socket is installed and the app is rebuilt.');
+  // Failed to load TcpSocket
 }
 
 // Export availability check
@@ -118,7 +114,7 @@ class MultiplayerService {
           }
         }
       } catch (nativeError) {
-        console.log('Native IP detection failed, using fallback:', nativeError);
+        // Native IP detection failed, using fallback
       }
       
       // Fallback for emulators in development
@@ -165,7 +161,7 @@ class MultiplayerService {
       try {
         server = TcpSocket.createServer(
           (socket: any) => {
-            console.log('Client connected');
+            // Client connected
             this.state.clientSocket = socket;
             this.state.status = 'connected';
             this.emit('connected', { role: 'host' });
@@ -175,17 +171,17 @@ class MultiplayerService {
                 const message: GameMessage = JSON.parse(data.toString());
                 this.handleMessage(message);
               } catch (error) {
-                console.error('Error parsing message:', error);
+                // Error parsing message
               }
             });
 
             socket.on('error', (error: any) => {
-              console.error('Socket error:', error);
+              // Socket error
               this.emit('error', error);
             });
 
             socket.on('close', () => {
-              console.log('Client disconnected');
+              // Client disconnected
               this.state.status = 'disconnected';
               this.emit('disconnected', {});
               this.disconnect();
@@ -226,14 +222,14 @@ class MultiplayerService {
       if (Platform.OS === 'android') {
         // On Android, try without address (binds to all interfaces by default)
         server.listen(port, () => {
-          console.log(`Server listening on port ${port} (all interfaces)`);
+          // Server listening on port (all interfaces)
           this.state.status = 'connecting';
           this.emit('hosting', { port });
         });
       } else {
         // On other platforms, explicitly bind to 0.0.0.0
         server.listen(port, '0.0.0.0', () => {
-          console.log(`Server listening on port ${port} at 0.0.0.0`);
+          // Server listening on port at 0.0.0.0
           this.state.status = 'connecting';
           this.emit('hosting', { port });
         });
@@ -241,13 +237,12 @@ class MultiplayerService {
 
       // Handle server errors
       server.on('error', (error: any) => {
-        console.error('Server error:', error);
+        // Server error
         const errorMessage = error.message || error.toString();
         
         // Handle port already in use error
         if (errorMessage.includes('EADDRINUSE') || errorMessage.includes('Address already in use')) {
           const errorMsg = `Port ${port} is already in use. Please wait a moment and try again, or use a different port.`;
-          console.error(errorMsg);
           this.state.status = 'error';
           this.emit('error', new Error(errorMsg));
           // Clean up
@@ -255,7 +250,6 @@ class MultiplayerService {
         } else if (errorMessage.includes('EACCES') || errorMessage.includes('Permission denied')) {
           // Handle permission denied error - try a different port or provide helpful message
           const errorMsg = `Permission denied to bind to port ${port}. Try using a port above 1024 (e.g., 8888, 9999) or restart the app.`;
-          console.error(errorMsg);
           this.state.status = 'error';
           this.emit('error', new Error(errorMsg));
           // Clean up
@@ -268,7 +262,7 @@ class MultiplayerService {
 
       return true;
     } catch (error: any) {
-      console.error('Error starting server:', error);
+      // Error starting server
       this.state.status = 'error';
       this.emit('error', error);
       return false;
@@ -295,7 +289,6 @@ class MultiplayerService {
 
       if (typeof TcpSocket.createConnection !== 'function') {
         const errorMsg = 'TcpSocket.createConnection is not a function. The module may not be properly linked. Please rebuild the app.';
-        console.error(errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -304,7 +297,7 @@ class MultiplayerService {
         client = TcpSocket.createConnection(
           { port, host: address },
           () => {
-            console.log('Connected to server');
+            // Connected to server
             this.state.clientSocket = client;
             this.state.status = 'connected';
             this.emit('connected', { role: 'client' });
@@ -312,13 +305,11 @@ class MultiplayerService {
         );
       } catch (createError: any) {
         const errorMsg = `Failed to create client connection: ${createError.message}. The react-native-tcp-socket module may not be properly linked. Please rebuild the app.`;
-        console.error(errorMsg, createError);
         throw new Error(errorMsg);
       }
 
       if (!client || client === null) {
         const errorMsg = 'Failed to create client connection - createConnection returned null. The react-native-tcp-socket native module is not properly linked. Please rebuild the app.';
-        console.error(errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -327,18 +318,18 @@ class MultiplayerService {
           const message: GameMessage = JSON.parse(data.toString());
           this.handleMessage(message);
         } catch (error) {
-          console.error('Error parsing message:', error);
+          // Error parsing message
         }
       });
 
       client.on('error', (error: any) => {
-        console.error('Connection error:', error);
+        // Connection error
         this.state.status = 'error';
         this.emit('error', error);
       });
 
       client.on('close', () => {
-        console.log('Disconnected from server');
+        // Disconnected from server
         this.state.status = 'disconnected';
         this.emit('disconnected', {});
         this.disconnect();
@@ -346,7 +337,7 @@ class MultiplayerService {
 
       return true;
     } catch (error) {
-      console.error('Error joining game:', error);
+      // Error joining game
       this.state.status = 'error';
       this.emit('error', error);
       return false;
@@ -364,7 +355,7 @@ class MultiplayerService {
         const data = JSON.stringify(message);
         socket.write(data);
       } catch (error) {
-        console.error('Error sending message:', error);
+        // Error sending message
       }
     }
   }
@@ -450,7 +441,7 @@ class MultiplayerService {
           this.state.serverSocket.destroy();
         }
       } catch (error) {
-        console.error('Error closing server:', error);
+        // Error closing server
       }
       this.state.serverSocket = null;
     }
@@ -468,7 +459,7 @@ class MultiplayerService {
           this.state.clientSocket.destroy();
         }
       } catch (error) {
-        console.error('Error closing client:', error);
+        // Error closing client
       }
       this.state.clientSocket = null;
     }

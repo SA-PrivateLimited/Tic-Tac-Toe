@@ -20,7 +20,7 @@ try {
     playMoveSound = soundModule.playMoveSound;
   }
 } catch (error) {
-  console.log('Sound module not available:', error);
+  // Sound module not available
 }
 
 interface GameStore extends GameState {
@@ -621,7 +621,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ markerTheme: theme });
       }
     } catch (error) {
-      console.log('Error loading marker theme:', error);
+      // Error loading marker theme
     }
   },
 }));

@@ -23,7 +23,7 @@ try {
     getInstrument = soundModule.getInstrument;
   }
 } catch (error) {
-  console.log('Sound module not available:', error);
+  // Sound module not available
 }
 
 const INSTRUMENT_KEY = '@tictactoe_instrument';
@@ -83,13 +83,13 @@ export const SoundSettingsModal: React.FC<SoundSettingsModalProps> = ({
         try {
           const { playMoveSound } = require('../utils/soundManager');
           if (playMoveSound) {
-            console.log(`🎵 Testing ${instrument} sound...`);
+            // Testing sound
             playMoveSound();
           } else {
-            console.log('❌ playMoveSound function not found');
+            // playMoveSound function not found
           }
         } catch (error) {
-          console.log('❌ Error loading sound manager:', error);
+          // Error loading sound manager
         }
       }, 500); // Increased delay to allow sound to initialize
     }
@@ -97,9 +97,9 @@ export const SoundSettingsModal: React.FC<SoundSettingsModalProps> = ({
     // Save preference
     try {
       await AsyncStorage.setItem(INSTRUMENT_KEY, JSON.stringify(instrument));
-      console.log(`✅ Saved instrument preference: ${instrument}`);
+      // Saved instrument preference
     } catch (error) {
-      console.log('Error saving instrument preference:', error);
+      // Error saving instrument preference
     }
   };
 
