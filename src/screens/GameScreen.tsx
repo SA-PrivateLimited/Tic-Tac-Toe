@@ -13,6 +13,7 @@ import { AchievementNotification } from '../components/AchievementNotification';
 import { GameModeModal } from '../components/GameModeModal';
 import { MultiplayerModal } from '../components/MultiplayerModal';
 import { BoardSizeModal } from '../components/BoardSizeModal';
+import { MarkerModal } from '../components/MarkerModal';
 import { useGameStore } from '../store/gameStore';
 import { useTheme } from '../theme/ThemeContext';
 import { isAITurn } from '../utils/aiPlayer';
@@ -62,6 +63,8 @@ export const GameScreen: React.FC = () => {
     boardSize,
     setBoardSize,
     loadBoardSize,
+    // Marker theme methods
+    loadMarkerTheme,
   } = useGameStore();
 
   const [showResetBalancesModal, setShowResetBalancesModal] = useState(false);
@@ -72,6 +75,7 @@ export const GameScreen: React.FC = () => {
   const [showGameModeModal, setShowGameModeModal] = useState(false);
   const [showMultiplayerModal, setShowMultiplayerModal] = useState(false);
   const [showBoardSizeModal, setShowBoardSizeModal] = useState(false);
+  const [showMarkerModal, setShowMarkerModal] = useState(false);
 
   useEffect(() => {
     // Load scores, balances, achievements, statistics, and board size from AsyncStorage on mount
@@ -80,6 +84,7 @@ export const GameScreen: React.FC = () => {
     loadAchievements();
     loadStatistics();
     loadBoardSize();
+    loadMarkerTheme();
   }, []);
 
   const getStatusMessage = () => {
@@ -364,6 +369,14 @@ export const GameScreen: React.FC = () => {
             <Text style={styles.buttonText}>🌐 Play Online</Text>
           </TouchableOpacity>
 
+          {/* Marker Theme button */}
+          <TouchableOpacity
+            style={[styles.button, styles.boardSizeButton]}
+            onPress={() => setShowMarkerModal(true)}
+          >
+            <Text style={styles.buttonText}>🎯 Markers</Text>
+          </TouchableOpacity>
+
           {/* Board Size button */}
           <TouchableOpacity
             style={[styles.button, styles.boardSizeButton]}
@@ -523,6 +536,12 @@ export const GameScreen: React.FC = () => {
         onClose={() => setShowBoardSizeModal(false)}
         currentSize={boardSize}
         onSelectSize={setBoardSize}
+      />
+
+      {/* Marker Modal */}
+      <MarkerModal
+        visible={showMarkerModal}
+        onClose={() => setShowMarkerModal(false)}
       />
     </View>
   );

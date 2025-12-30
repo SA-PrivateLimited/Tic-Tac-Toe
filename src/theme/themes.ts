@@ -180,6 +180,42 @@ export const THEMES: Record<ThemeId, Theme> = {
       shadowColor: '#f9844a',
     },
   },
+
+  glow: {
+    id: 'glow',
+    name: 'Glow Mode',
+    colors: {
+      // Background colors
+      background: '#0a0a15',
+      boardBackground: '#1a1a2a',
+      cellBackground: '#252540',
+      cellBorder: '#4a4a7a',
+
+      // Text colors
+      textPrimary: '#ffffff',
+      textSecondary: '#b8b8d8',
+
+      // Player colors - bright glowing colors
+      playerX: '#ff0080',
+      playerO: '#00ffff',
+
+      // Button colors
+      buttonPrimary: '#9d4edd',
+      buttonSecondary: '#5a189a',
+      buttonDestructive: '#ff006e',
+
+      // Game state colors
+      winningCell: '#ffbe0b',
+
+      // Modal colors
+      modalBackground: '#1a1a2a',
+      modalBorder: '#9d4edd',
+      modalOverlay: 'rgba(10, 10, 21, 0.95)',
+
+      // Shadow/effects - bright glow colors
+      shadowColor: '#9d4edd',
+    },
+  },
 };
 
 // Helper function to get theme by ID

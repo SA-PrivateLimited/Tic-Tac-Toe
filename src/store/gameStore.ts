@@ -7,6 +7,7 @@ import { initializeAchievements } from '../data/achievementDefinitions';
 import { checkAchievements, updateAchievementProgress } from '../utils/achievementChecker';
 import { getAIMove, isAITurn, AIDifficulty } from '../utils/aiPlayer';
 import { multiplayerService } from '../services/multiplayerService';
+import { MarkerThemeId, DEFAULT_MARKER_THEME } from '../types/markers';
 
 // Import sound manager with error handling
 let playMoveSound: (() => void) = () => {
@@ -50,6 +51,9 @@ interface GameStore extends GameState {
   // Board size methods
   setBoardSize: (size: BoardSize) => void;
   loadBoardSize: () => Promise<void>;
+  // Marker theme methods
+  setMarkerTheme: (theme: MarkerThemeId) => Promise<void>;
+  loadMarkerTheme: () => Promise<void>;
 }
 
 const SCORES_KEY = '@tictactoe_scores';
@@ -60,6 +64,7 @@ const STATISTICS_KEY = '@tictactoe_statistics';
 const GAME_MODE_KEY = '@tictactoe_game_mode';
 const AI_DIFFICULTY_KEY = '@tictactoe_ai_difficulty';
 const BOARD_SIZE_KEY = '@tictactoe_board_size';
+const MARKER_THEME_KEY = '@tictactoe_marker_theme';
 
 const initialState: GameState = {
   board: getEmptyBoard(3),
@@ -106,6 +111,8 @@ const initialState: GameState = {
   aiDifficulty: 'medium',
   aiPlayer: null,
   humanPlayer: 'X',
+  // Marker theme initial state
+  markerTheme: DEFAULT_MARKER_THEME,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -592,6 +599,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     } catch (error) {
       // Ignore errors, use default size 3
+    }
+  },
+
+  // Set marker theme
+  setMarkerTheme: async (theme: MarkerThemeId) => {
+    try {
+      await AsyncStorage.setItem(MARKER_THEME_KEY, JSON.stringify(theme));
+      set({ markerTheme: theme });
+    } catch (error) {
+      console.log('Error saving marker theme:', error);
+    }
+  },
+
+  // Load marker theme from storage
+  loadMarkerTheme: async () => {
+    try {
+      const themeJson = await AsyncStorage.getItem(MARKER_THEME_KEY);
+      if (themeJson) {
+        const theme = JSON.parse(themeJson) as MarkerThemeId;
+        set({ markerTheme: theme });
+      }
+    } catch (error) {
+      console.log('Error loading marker theme:', error);
     }
   },
 }));

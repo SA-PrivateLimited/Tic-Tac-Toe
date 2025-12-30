@@ -9,6 +9,9 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Clipboard,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { multiplayerService, ConnectionStatus, isMultiplayerAvailable } from '../services/multiplayerService';

@@ -1,5 +1,6 @@
 import { Achievement, Statistics, UnlockedAchievementNotification } from './achievements';
 import { AIDifficulty } from '../utils/aiPlayer';
+import { MarkerThemeId } from './markers';
 
 export type Player = 'X' | 'O' | null;
 
@@ -38,6 +39,8 @@ export interface GameState {
   aiDifficulty: AIDifficulty;
   aiPlayer: Player | null; // Which player is AI (X or O)
   humanPlayer: Player; // Which player is human (X or O)
+  // Marker theme
+  markerTheme: MarkerThemeId;
 }
 
 export interface GameStats {

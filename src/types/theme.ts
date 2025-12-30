@@ -1,4 +1,4 @@
-export type ThemeId = 'dark' | 'light' | 'neon' | 'ocean' | 'sunset';
+export type ThemeId = 'dark' | 'light' | 'neon' | 'ocean' | 'sunset' | 'glow';
 
 export interface ThemeColors {
   // Background colors

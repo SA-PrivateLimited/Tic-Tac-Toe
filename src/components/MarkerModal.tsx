@@ -7,30 +7,24 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { ThemeId } from '../types/theme';
+import { MarkerThemeId, MARKER_THEMES } from '../types/markers';
 import { useTheme } from '../theme/ThemeContext';
-import { THEMES } from '../theme/themes';
+import { useGameStore } from '../store/gameStore';
 
-interface ThemeModalProps {
+interface MarkerModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
-  const { theme, themeId, setTheme } = useTheme();
+export const MarkerModal: React.FC<MarkerModalProps> = ({ visible, onClose }) => {
+  const { theme } = useTheme();
+  const { markerTheme, setMarkerTheme } = useGameStore();
 
-  const handleSelectTheme = async (newThemeId: ThemeId) => {
-    await setTheme(newThemeId);
+  const handleSelectTheme = async (newThemeId: MarkerThemeId) => {
+    await setMarkerTheme(newThemeId);
   };
 
-  const themeOptions: Array<{ id: ThemeId; name: string; emoji: string }> = [
-    { id: 'dark', name: 'Dark Mode', emoji: '🌙' },
-    { id: 'light', name: 'Light Mode', emoji: '☀️' },
-    { id: 'neon', name: 'Neon Mode', emoji: '⚡' },
-    { id: 'ocean', name: 'Ocean Mode', emoji: '🌊' },
-    { id: 'sunset', name: 'Sunset Mode', emoji: '🌅' },
-    { id: 'glow', name: 'Glow Mode', emoji: '✨' },
-  ];
+  const markerOptions = Object.values(MARKER_THEMES);
 
   const styles = StyleSheet.create({
     overlay: {
@@ -69,11 +63,11 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
       marginBottom: 24,
       lineHeight: 20,
     },
-    themesList: {
+    markersList: {
       maxHeight: 400,
       marginBottom: 20,
     },
-    themeItem: {
+    markerItem: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.colors.cellBackground,
@@ -84,16 +78,27 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
       borderWidth: 2,
       borderColor: theme.colors.cellBorder,
     },
-    selectedTheme: {
+    selectedMarker: {
       backgroundColor: theme.colors.boardBackground,
       borderColor: theme.colors.playerO,
       borderWidth: 3,
     },
-    emoji: {
-      fontSize: 32,
+    markerPreview: {
+      flexDirection: 'row',
+      alignItems: 'center',
       marginRight: 16,
     },
-    themeLabel: {
+    markerSymbol: {
+      fontSize: 32,
+      width: 50,
+      textAlign: 'center',
+    },
+    vsText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+    },
+    markerLabel: {
       flex: 1,
       fontSize: 18,
       fontWeight: '600',
@@ -121,6 +126,7 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
       elevation: 8,
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.1)',
+      marginBottom: 40,
     },
     closeButtonText: {
       color: theme.colors.textPrimary,
@@ -139,31 +145,35 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Choose Theme</Text>
+          <Text style={styles.title}>Choose Markers</Text>
           <Text style={styles.subtitle}>
-            Select your preferred visual theme
+            Select your preferred marker theme
           </Text>
 
-          <ScrollView style={styles.themesList} showsVerticalScrollIndicator={false}>
-            {themeOptions.map((option) => (
+          <ScrollView style={styles.markersList} showsVerticalScrollIndicator={false}>
+            {markerOptions.map((option) => (
               <TouchableOpacity
                 key={option.id}
                 style={[
-                  styles.themeItem,
-                  themeId === option.id && styles.selectedTheme,
+                  styles.markerItem,
+                  markerTheme === option.id && styles.selectedMarker,
                 ]}
                 onPress={() => handleSelectTheme(option.id)}
               >
-                <Text style={styles.emoji}>{option.emoji}</Text>
+                <View style={styles.markerPreview}>
+                  <Text style={styles.markerSymbol}>{option.playerX.emoji}</Text>
+                  <Text style={[styles.vsText, { marginHorizontal: 8 }]}>vs</Text>
+                  <Text style={styles.markerSymbol}>{option.playerO.emoji}</Text>
+                </View>
                 <Text
                   style={[
-                    styles.themeLabel,
-                    themeId === option.id && styles.selectedLabel,
+                    styles.markerLabel,
+                    markerTheme === option.id && styles.selectedLabel,
                   ]}
                 >
                   {option.name}
                 </Text>
-                {themeId === option.id && (
+                {markerTheme === option.id && (
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>
@@ -178,3 +188,4 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({ visible, onClose }) => {
     </Modal>
   );
 };
+
