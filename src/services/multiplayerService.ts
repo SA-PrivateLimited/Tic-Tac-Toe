@@ -105,17 +105,37 @@ class MultiplayerService {
     // - For emulator-to-emulator communication, use 10.0.2.2 to connect to the host
     // - The server on the host emulator listens on 0.0.0.0, accessible via 10.0.2.2 from other emulators
     if (Platform.OS === 'android') {
-      return '10.0.2.2'; // Android emulator's way to access host machine
+      // Try to get IP from native module
+      try {
+        const { NativeModules } = require('react-native');
+        const NetworkInfoModule = NativeModules.NetworkInfoModule;
+        
+        if (NetworkInfoModule && NetworkInfoModule.getDeviceIP) {
+          const ip: string | null = await NetworkInfoModule.getDeviceIP();
+          
+          if (ip && ip !== 'null' && ip.trim() !== '') {
+            return ip;
+          }
+        }
+      } catch (nativeError) {
+        console.log('Native IP detection failed, using fallback:', nativeError);
+      }
+      
+      // Fallback for emulators in development
+      if (__DEV__) {
+        return '10.0.2.2'; // Android emulator's way to access host machine
+      }
     }
-    // For iOS or physical devices, you'd need actual IP detection
-    return '192.168.1.100'; // Fallback for physical devices
+    
+    // For physical devices or if native module fails
+    return 'Check WiFi Settings';
   }
 
   // Start hosting a game
   async startHosting(port: number = 8888): Promise<boolean> {
     try {
-      // Disconnect any existing connections first
-      this.disconnect();
+      // Disconnect any existing connections first (silently to avoid false alerts)
+      this.disconnect(true);
       
       // Wait a moment for cleanup
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -200,11 +220,24 @@ class MultiplayerService {
       this.state.serverSocket = server;
       
       // Start listening on the port
-      server.listen(port, '0.0.0.0', () => {
-        console.log(`Server listening on port ${port}`);
-        this.state.status = 'connected';
-        this.emit('hosting', { port });
-      });
+      // For Android, try binding without address first (defaults to all interfaces)
+      // This often works better than explicitly specifying 0.0.0.0
+      // If that fails, the error handler will catch it
+      if (Platform.OS === 'android') {
+        // On Android, try without address (binds to all interfaces by default)
+        server.listen(port, () => {
+          console.log(`Server listening on port ${port} (all interfaces)`);
+          this.state.status = 'connecting';
+          this.emit('hosting', { port });
+        });
+      } else {
+        // On other platforms, explicitly bind to 0.0.0.0
+        server.listen(port, '0.0.0.0', () => {
+          console.log(`Server listening on port ${port} at 0.0.0.0`);
+          this.state.status = 'connecting';
+          this.emit('hosting', { port });
+        });
+      }
 
       // Handle server errors
       server.on('error', (error: any) => {
@@ -218,7 +251,15 @@ class MultiplayerService {
           this.state.status = 'error';
           this.emit('error', new Error(errorMsg));
           // Clean up
-          this.disconnect();
+          this.disconnect(true);
+        } else if (errorMessage.includes('EACCES') || errorMessage.includes('Permission denied')) {
+          // Handle permission denied error - try a different port or provide helpful message
+          const errorMsg = `Permission denied to bind to port ${port}. Try using a port above 1024 (e.g., 8888, 9999) or restart the app.`;
+          console.error(errorMsg);
+          this.state.status = 'error';
+          this.emit('error', new Error(errorMsg));
+          // Clean up
+          this.disconnect(true);
         } else {
           this.state.status = 'error';
           this.emit('error', error);
@@ -390,7 +431,9 @@ class MultiplayerService {
   }
 
   // Disconnect
-  disconnect() {
+  disconnect(silent: boolean = false) {
+    const wasConnected = this.state.status === 'connected';
+    
     if (this.state.serverSocket) {
       try {
         // Remove all listeners before closing
@@ -433,7 +476,11 @@ class MultiplayerService {
     this.state.role = null;
     this.state.status = 'disconnected';
     this.state.isMyTurn = false;
-    this.emit('disconnected', {});
+    
+    // Only emit disconnected event if we were actually connected and not doing a silent disconnect
+    if (wasConnected && !silent) {
+      this.emit('disconnected', {});
+    }
   }
 
   // Check if it's my turn

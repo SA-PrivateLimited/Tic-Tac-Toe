@@ -68,18 +68,18 @@ export const BetModal: React.FC<BetModalProps> = ({ visible, onConfirm, onCancel
               : 'The winner will receive these points. Enter 0 to play without points.'}
           </Text>
 
-              <View style={styles.inputContainer}>
+          <View style={styles.inputContainer}>
                 <Text style={styles.currencySymbol}>Pts</Text>
-                <TextInput
-                  style={styles.input}
-                  value={betInput}
-                  onChangeText={setBetInput}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#666"
-                  autoFocus
-                />
-              </View>
+            <TextInput
+              style={styles.input}
+              value={betInput}
+              onChangeText={setBetInput}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor="#666"
+              autoFocus
+            />
+          </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity

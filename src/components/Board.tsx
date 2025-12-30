@@ -65,14 +65,14 @@ export const Board: React.FC<BoardProps> = ({ board, boardSize, onCellPress, dis
             {row.map((cell, colIndex) => {
               const index = rowIndex * boardSize + colIndex;
               return (
-                <Cell
-                  key={index}
-                  value={cell}
-                  onPress={() => onCellPress(index)}
-                  disabled={disabled || cell !== null}
-                  isWinning={winningLine?.includes(index) || false}
+          <Cell
+            key={index}
+            value={cell}
+            onPress={() => onCellPress(index)}
+            disabled={disabled || cell !== null}
+            isWinning={winningLine?.includes(index) || false}
                   size={cellSize}
-                />
+          />
               );
             })}
           </View>

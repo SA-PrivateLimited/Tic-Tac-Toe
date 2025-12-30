@@ -32,7 +32,8 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   const [serverAddress, setServerAddress] = useState('');
   const [serverPort, setServerPort] = useState('8888');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
-  const [deviceIP, setDeviceIP] = useState('10.0.2.2'); // Default to emulator host IP
+  const [deviceIP, setDeviceIP] = useState('Loading...');
+  const [ipCopied, setIpCopied] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -45,22 +46,40 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
         );
       }
       
-      // Get device IP (simplified - in production use proper method)
-      multiplayerService.getDeviceIP().then(ip => {
-        setDeviceIP(ip);
-      });
+      // Get device IP
+      loadDeviceIP();
 
       // Listen for connection events
       const handleConnected = () => {
         setConnectionStatus('connected');
-        Alert.alert('Connected!', 'You are now connected to your opponent.', [
-          { text: 'OK', onPress: onConnected },
-        ]);
+        if (mode === 'join') {
+          Alert.alert('Connected!', 'You are now connected to your opponent.', [
+            { text: 'OK', onPress: onConnected },
+          ]);
+        } else {
+          // For host, connection means a client joined
+          setConnectionStatus('connected');
+          onConnected();
+        }
+      };
+
+      const handleHosting = () => {
+        // Server is listening, waiting for client
+        setConnectionStatus('connecting');
       };
 
       const handleDisconnected = () => {
-        setConnectionStatus('disconnected');
-        Alert.alert('Disconnected', 'Connection lost.');
+        // Only show disconnected alert if we were actually connected
+        if (connectionStatus === 'connected') {
+          setConnectionStatus('disconnected');
+          Alert.alert('Disconnected', 'Connection lost.');
+        } else if (connectionStatus === 'connecting') {
+          // If we were connecting/hosting, just reset to disconnected without alert
+          setConnectionStatus('disconnected');
+        } else {
+          // If we were just starting, set to error instead
+          setConnectionStatus('disconnected');
+        }
       };
 
       const handleError = (error: any) => {
@@ -76,6 +95,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       };
 
       multiplayerService.on('connected', handleConnected);
+      multiplayerService.on('hosting', handleHosting);
       multiplayerService.on('disconnected', handleDisconnected);
       multiplayerService.on('error', handleError);
 
@@ -86,6 +106,40 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       };
     }
   }, [visible, onConnected]);
+
+  const loadDeviceIP = async () => {
+    try {
+      const ip = await multiplayerService.getDeviceIP();
+      setDeviceIP(ip);
+    } catch (error) {
+      setDeviceIP('Check WiFi Settings');
+    }
+  };
+
+  const copyIPToClipboard = async () => {
+    if (deviceIP && deviceIP !== 'Loading...' && deviceIP !== 'Check WiFi Settings') {
+      await Clipboard.setString(deviceIP);
+      setIpCopied(true);
+      Alert.alert('Copied!', `IP address ${deviceIP} copied to clipboard. Share it with your friend!`);
+      setTimeout(() => setIpCopied(false), 2000);
+    } else {
+      Alert.alert(
+        'How to Find Your IP Address',
+        Platform.OS === 'android'
+          ? '1. Go to Settings\n2. Tap WiFi\n3. Tap on your connected network\n4. Your IP address will be shown\n\nOr check your router\'s connected devices list.'
+          : '1. Go to Settings\n2. Tap WiFi\n3. Tap the (i) icon next to your network\n4. Your IP address is shown as "IP Address"',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const openWiFiSettings = () => {
+    if (Platform.OS === 'android') {
+      Linking.openSettings();
+    } else {
+      Linking.openURL('app-settings:');
+    }
+  };
 
   const handleHostGame = async () => {
     setMode('host');
@@ -233,12 +287,52 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       color: theme.colors.textSecondary,
       textAlign: 'center',
     },
+    ipRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 8,
+      gap: 8,
+    },
     ipAddress: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: 'bold',
       color: theme.colors.buttonPrimary,
       textAlign: 'center',
-      marginTop: 4,
+      flex: 1,
+    },
+    copyButton: {
+      backgroundColor: theme.colors.buttonPrimary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      marginLeft: 8,
+    },
+    copyButtonText: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    wifiButton: {
+      backgroundColor: theme.colors.buttonSecondary,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 8,
+      marginTop: 12,
+      alignItems: 'center',
+    },
+    wifiButtonText: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    ipHelpText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 12,
+      lineHeight: 18,
+      fontStyle: 'italic',
     },
     closeButton: {
       marginBottom: 40,
@@ -291,7 +385,34 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
               <>
                 <View style={styles.ipDisplay}>
                   <Text style={styles.ipText}>Your IP Address:</Text>
-                  <Text style={styles.ipAddress}>{deviceIP}</Text>
+                  <View style={styles.ipRow}>
+                    <Text style={styles.ipAddress}>{deviceIP}</Text>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={copyIPToClipboard}
+                    >
+                      <Text style={styles.copyButtonText}>
+                        {ipCopied ? '✓ Copied' : '📋 Copy'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  {deviceIP === 'Check WiFi Settings' && (
+                    <TouchableOpacity
+                      style={styles.wifiButton}
+                      onPress={openWiFiSettings}
+                    >
+                      <Text style={styles.wifiButtonText}>Open WiFi Settings</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Text style={styles.ipHelpText}>
+                    Share this IP address with your friend so they can join your game.
+                    Both devices must be on the same WiFi network.
+                    {'\n\n'}
+                    <Text style={{ fontWeight: 'bold', color: theme.colors.buttonPrimary }}>
+                      For Emulators: Set up port forwarding:{'\n'}
+                      adb -s emulator-5554 forward tcp:{serverPort || '8888'} tcp:{serverPort || '8888'}
+                    </Text>
+                  </Text>
                 </View>
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Port (default: 8888)</Text>
@@ -304,10 +425,15 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                     keyboardType="numeric"
                   />
                 </View>
-                {connectionStatus === 'disconnected' && (
+                {(connectionStatus === 'disconnected' || connectionStatus === 'error') && (
                   <TouchableOpacity style={styles.button} onPress={handleHostGame}>
                     <Text style={styles.buttonText}>Start Hosting</Text>
                   </TouchableOpacity>
+                )}
+                {connectionStatus === 'connecting' && (
+                  <View style={[styles.button, { backgroundColor: theme.colors.buttonSecondary }]}>
+                    <Text style={styles.buttonText}>Waiting for player to join...</Text>
+                  </View>
                 )}
                 {connectionStatus === 'connected' && (
                   <TouchableOpacity
