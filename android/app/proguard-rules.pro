@@ -33,3 +33,19 @@
 # Hermes
 -keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.jni.** { *; }
+
+# React Native Screens - Keep to avoid crashes
+-keep class com.swmansion.rnscreens.** { *; }
+-dontwarn com.swmansion.rnscreens.**
+
+# Kotlin stdlib compatibility for Android 15
+# Prevent issues with removeFirst/removeLast conflicts
+-keep class kotlin.collections.** { *; }
+-keepclassmembers class kotlin.collections.MutableList {
+    *;
+}
+
+# Keep all Kotlin extension functions that might conflict
+-keepclassmembers class kotlin.collections.CollectionsKt {
+    *;
+}

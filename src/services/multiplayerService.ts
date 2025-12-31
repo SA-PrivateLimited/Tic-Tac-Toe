@@ -47,6 +47,7 @@ export interface GameMessage {
   currentPlayer?: Player;
   winner?: Player | null;
   isDraw?: boolean;
+  startingPlayer?: Player;
 }
 
 class MultiplayerService {
@@ -146,13 +147,11 @@ class MultiplayerService {
       // Check if TcpSocket is available
       if (!TcpSocket) {
         const errorMsg = 'TcpSocket module is not available. Please ensure react-native-tcp-socket is properly installed and linked. You may need to rebuild the app.';
-        console.error(errorMsg);
         throw new Error(errorMsg);
       }
 
       if (typeof TcpSocket.createServer !== 'function') {
         const errorMsg = 'TcpSocket.createServer is not a function. The module may not be properly linked. Please rebuild the app.';
-        console.error(errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -190,24 +189,17 @@ class MultiplayerService {
         );
       } catch (createError: any) {
         const errorMsg = `Failed to create server: ${createError.message}. The react-native-tcp-socket module may not be properly linked. Please rebuild the app.`;
-        console.error(errorMsg, createError);
         throw new Error(errorMsg);
       }
 
       // Check if server was created successfully
       if (!server || server === null) {
         const errorMsg = 'Failed to create server - createServer returned null. The react-native-tcp-socket native module is not properly linked. Please rebuild the app: cd android && ./gradlew clean && cd .. && npx react-native run-android';
-        console.error(errorMsg);
-        console.error('TcpSocket object:', TcpSocket);
-        console.error('TcpSocket methods:', TcpSocket ? Object.keys(TcpSocket) : 'TcpSocket is null');
         throw new Error(errorMsg);
       }
 
       // Check if listen method exists
       if (typeof server.listen !== 'function') {
-        console.error('Server object:', server);
-        console.error('Server type:', typeof server);
-        console.error('Server methods:', server ? Object.keys(server) : 'server is null');
         const errorMsg = `Server object does not have listen method. The native module may not be properly linked. Please rebuild the app. Available methods: ${server ? Object.keys(server).join(', ') : 'none'}`;
         throw new Error(errorMsg);
       }
@@ -283,7 +275,6 @@ class MultiplayerService {
       // Check if TcpSocket is available
       if (!TcpSocket) {
         const errorMsg = 'TcpSocket module is not available. Please ensure react-native-tcp-socket is properly installed and linked. You may need to rebuild the app.';
-        console.error(errorMsg);
         throw new Error(errorMsg);
       }
 
@@ -367,7 +358,7 @@ class MultiplayerService {
         this.emit('move', message.data);
         break;
       case 'reset':
-        this.emit('reset', {});
+        this.emit('reset', { startingPlayer: message.startingPlayer || 'X' });
         break;
       case 'sync':
         this.emit('sync', {
@@ -397,9 +388,9 @@ class MultiplayerService {
   }
 
   // Send reset game
-  sendReset() {
+  sendReset(startingPlayer: Player = 'X') {
     if (this.state.status === 'connected') {
-      this.sendMessage({ type: 'reset' });
+      this.sendMessage({ type: 'reset', startingPlayer });
     }
   }
 

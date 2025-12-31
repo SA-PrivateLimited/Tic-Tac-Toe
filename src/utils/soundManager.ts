@@ -31,7 +31,7 @@ let currentInstrument: Instrument = 'piano';
 // Set the current instrument
 export const setInstrument = (instrument: Instrument) => {
   currentInstrument = instrument;
-  console.log(`🎵 Switching to instrument: ${instrument}`);
+  // Switching to instrument
 };
 
 // Get current instrument
@@ -58,15 +58,15 @@ const playSound = () => {
         SoundPlayerModule.playSound(`${soundFile}.wav`)
           .then((success: boolean) => {
             if (success) {
-              console.log(`✅ Successfully played ${currentInstrument} sound (${soundFile}.wav)`);
+              // Successfully played sound
             } else {
-              console.log(`❌ Failed to play ${currentInstrument} sound`);
+              // Failed to play sound
               // Fallback to vibration
               fallbackToVibration();
             }
           })
           .catch((error: any) => {
-            console.log(`❌ Error playing WAV file:`, error);
+            // Error playing WAV file
             // Fallback to vibration
             fallbackToVibration();
           });
@@ -78,7 +78,7 @@ const playSound = () => {
       fallbackToVibration();
     }
   } catch (error) {
-    console.log(`❌ Error playing sound for ${currentInstrument}:`, error);
+    // Error playing sound
     fallbackToVibration();
   }
 };
@@ -98,10 +98,10 @@ const fallbackToVibration = () => {
     const duration = durations[currentInstrument] || 50;
     if (duration > 0) {
       Vibration.vibrate(duration);
-      console.log(`🔊 Using vibration fallback for ${currentInstrument} (${duration}ms)`);
+      // Using vibration fallback
     }
   } catch (e) {
-    console.log(`❌ Vibration fallback also failed:`, e);
+    // Vibration fallback also failed
   }
 };
 

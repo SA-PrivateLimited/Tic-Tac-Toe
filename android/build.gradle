@@ -4,17 +4,22 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 35
         targetSdkVersion = 35
-        ndkVersion = "25.1.8937393"
-        kotlinVersion = "1.8.0"
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.24"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.1")
+        // AGP 8.5.1+ automatically enables 16 KB alignment for uncompressed shared libraries
+        // BUT requires NDK 26.1+ for full 16 KB page size support
+        // See: https://developer.android.com/guide/practices/page-sizes
+        classpath("com.android.tools.build:gradle:8.5.1")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        // Firebase Google Services plugin
+        classpath("com.google.gms:google-services:4.4.0")
     }
 }
 

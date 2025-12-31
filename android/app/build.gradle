@@ -1,6 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 apply plugin: "org.jetbrains.kotlin.android"
+// Firebase Google Services plugin (for internet multiplayer)
+// Note: Requires google-services.json file in android/app/
+apply plugin: "com.google.gms.google-services"
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
@@ -21,8 +24,16 @@ android {
         applicationId "com.satictactoe"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "1.0.9"
+        versionCode 22
+        versionName "1.0.22"
+        
+        // Support for 16 KB page size devices
+        // NDK 26.1+ is REQUIRED for 16 KB page size support (Play Store requirement)
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+            // Ensure proper alignment for 16 KB page sizes
+            debugSymbolLevel 'FULL'
+        }
     }
 
     signingConfigs {
@@ -64,6 +75,11 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        // Fix for Android 15 compatibility - avoid removeFirst/removeLast conflicts
+        freeCompilerArgs += [
+            "-Xjvm-default=all",
+            "-Xno-param-assertions"
+        ]
     }
 
     sourceSets {
@@ -77,14 +93,26 @@ android {
     }
 
     // Support for 16 KB page size devices
+    // Per Android docs: https://developer.android.com/guide/practices/page-sizes
+    // AGP 8.5.1+ automatically aligns uncompressed shared libraries to 16 KB boundaries
     packaging {
         jniLibs {
+            // CRITICAL: useLegacyPackaging = false enables 16 KB page size support
+            // This ensures native libraries are uncompressed and properly aligned
             useLegacyPackaging = false
         }
-        pickFirst 'lib/x86/libc++_shared.so'
-        pickFirst 'lib/x86_64/libc++_shared.so'
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
+    }
+}
+
+configurations.all {
+    // Force Kotlin stdlib version across all dependencies for Android 15 compatibility
+    // This prevents removeFirst/removeLast conflicts that cause crashes
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
     }
 }
 
@@ -94,6 +122,18 @@ dependencies {
     // AndroidX Activity for edge-to-edge support
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
+    
+    // Kotlin stdlib - ensure compatibility with Android 15
+    // Force a compatible version to avoid removeFirst/removeLast conflicts
+    // This ensures backward compatibility with Android 14 and earlier
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    
+    // Firebase for internet multiplayer
+    // Note: Requires google-services.json file in android/app/
+    // See FIREBASE_SETUP.md for setup instructions
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-database'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

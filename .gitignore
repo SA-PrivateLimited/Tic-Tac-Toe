@@ -55,3 +55,12 @@ ios/fastlane/test_output
 
 # testing
 /coverage
+
+# Firebase Service Account Keys (NEVER commit these!)
+ServiceAccountKeys.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!app.json
+!android/app/google-services.json

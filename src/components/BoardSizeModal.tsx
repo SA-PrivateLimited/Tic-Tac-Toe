@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { BoardSize } from '../types/game';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { internetMultiplayerService } from '../services/internetMultiplayerService';
 
 interface BoardSizeModalProps {
   visible: boolean;
@@ -37,6 +39,16 @@ export const BoardSizeModal: React.FC<BoardSizeModalProps> = ({
   }, [visible, currentSize]);
 
   const handleSelectSize = async (size: BoardSize) => {
+    // Check if internet multiplayer is active - lock to 3x3
+    const internetState = internetMultiplayerService.getState();
+    if ((internetState.status === 'connected' || internetState.status === 'connecting') && size !== 3) {
+      Alert.alert(
+        'Board Size Locked',
+        'Board size is locked to 3×3 during internet multiplayer games. Please disconnect from internet multiplayer to change the board size.'
+      );
+      return;
+    }
+    
     setSelectedSize(size);
     await AsyncStorage.setItem(BOARD_SIZE_KEY, JSON.stringify(size));
     onSelectSize(size);
@@ -151,21 +163,32 @@ export const BoardSizeModal: React.FC<BoardSizeModalProps> = ({
             Choose the size of the game board
           </Text>
 
-          {boardSizes.map((boardSize) => (
-            <TouchableOpacity
-              key={boardSize.size}
-              style={[
-                styles.sizeOption,
-                selectedSize === boardSize.size && styles.sizeOptionSelected,
-              ]}
-              onPress={() => handleSelectSize(boardSize.size)}>
-              <Text style={styles.sizeLabel}>{boardSize.label}</Text>
-              <Text style={styles.sizeDescription}>{boardSize.description}</Text>
-              {selectedSize === boardSize.size && (
-                <Text style={styles.checkmark}>✓ Selected</Text>
-              )}
-            </TouchableOpacity>
-          ))}
+          {boardSizes.map((boardSize) => {
+            const internetState = internetMultiplayerService.getState();
+            const isInternetActive = internetState.status === 'connected' || internetState.status === 'connecting';
+            const isLocked = isInternetActive && boardSize.size !== 3;
+            
+            return (
+              <TouchableOpacity
+                key={boardSize.size}
+                style={[
+                  styles.sizeOption,
+                  selectedSize === boardSize.size && styles.sizeOptionSelected,
+                  isLocked && { opacity: 0.5 },
+                ]}
+                onPress={() => handleSelectSize(boardSize.size)}
+                disabled={isLocked}>
+                <Text style={styles.sizeLabel}>
+                  {boardSize.label}
+                  {isLocked && ' (Locked)'}
+                </Text>
+                <Text style={styles.sizeDescription}>{boardSize.description}</Text>
+                {selectedSize === boardSize.size && (
+                  <Text style={styles.checkmark}>✓ Selected</Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text style={styles.closeButtonText}>Close</Text>

@@ -1,0 +1,17 @@
+🚀 What's New in Version 1.0.11:
+
+✅ 16 KB Memory Page Size Support - Full compatibility with latest Android devices
+✅ Android 15 Compatibility - Fixed compatibility issues
+✅ Improved Stability - Better performance on all Android versions
+✅ Crash Fixes - Resolved issues that could cause crashes
+
+🎮 Features:
+• Multiple board sizes (3x3, 4x4, 5x5)
+• AI opponent with 3 difficulty levels
+• WiFi multiplayer
+• Customizable markers and themes
+• Achievement system
+• Statistics tracking
+
+Enjoy the improved gaming experience!
+

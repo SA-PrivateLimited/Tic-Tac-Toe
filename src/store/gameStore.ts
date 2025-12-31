@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameState, Player, GameMode, BoardSize } from '../types/game';
+import { GameState, Player, GameMode, BoardSize, Board } from '../types/game';
 import { checkWinner, checkDraw, getEmptyBoard } from '../utils/gameLogic';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AchievementId } from '../types/achievements';
@@ -7,6 +7,7 @@ import { initializeAchievements } from '../data/achievementDefinitions';
 import { checkAchievements, updateAchievementProgress } from '../utils/achievementChecker';
 import { getAIMove, isAITurn, AIDifficulty } from '../utils/aiPlayer';
 import { multiplayerService } from '../services/multiplayerService';
+import { internetMultiplayerService } from '../services/internetMultiplayerService';
 import { MarkerThemeId, DEFAULT_MARKER_THEME } from '../types/markers';
 
 // Import sound manager with error handling
@@ -54,6 +55,9 @@ interface GameStore extends GameState {
   // Marker theme methods
   setMarkerTheme: (theme: MarkerThemeId) => Promise<void>;
   loadMarkerTheme: () => Promise<void>;
+  // Game state persistence methods
+  saveGameState: () => Promise<void>;
+  loadGameState: () => Promise<void>;
 }
 
 const SCORES_KEY = '@tictactoe_scores';
@@ -65,6 +69,7 @@ const GAME_MODE_KEY = '@tictactoe_game_mode';
 const AI_DIFFICULTY_KEY = '@tictactoe_ai_difficulty';
 const BOARD_SIZE_KEY = '@tictactoe_board_size';
 const MARKER_THEME_KEY = '@tictactoe_marker_theme';
+const GAME_STATE_KEY = '@tictactoe_game_state';
 
 const initialState: GameState = {
   board: getEmptyBoard(3),
@@ -119,10 +124,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...initialState,
 
   makeMove: (index: number) => {
-    const { board, currentPlayer, winner, isDraw, gameStartTime } = get();
+    const { board, currentPlayer, winner, isDraw, gameStartTime, gameMode } = get();
 
     if (board[index] || winner || isDraw) {
       return;
+    }
+
+    // In multiplayer mode, check if it's the player's turn before allowing move
+    if (gameMode === 'multiplayer') {
+      const wifiState = multiplayerService.getState();
+      const internetState = internetMultiplayerService.getState();
+      
+      let isMyTurn = false;
+      if (wifiState.status === 'connected') {
+        isMyTurn = multiplayerService.isMyTurn();
+        // Also check if currentPlayer matches my player
+        const myPlayer = multiplayerService.getMyPlayer();
+        if (currentPlayer !== myPlayer) {
+          return; // Not my turn
+        }
+      } else if (internetState.status === 'connected') {
+        isMyTurn = internetMultiplayerService.isMyTurn();
+        // Also check if currentPlayer matches my player
+        const myPlayer = internetMultiplayerService.getMyPlayer();
+        if (currentPlayer !== myPlayer) {
+          return; // Not my turn
+        }
+      } else {
+        // Not connected, don't allow moves
+        return;
+      }
+      
+      // Double check: if it's not my turn, don't allow the move
+      if (!isMyTurn) {
+        return;
+      }
     }
 
     // Start game timer on first move
@@ -130,6 +166,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ gameStartTime: Date.now() });
     }
 
+    // Create new board array preserving all previous moves
     const newBoard = [...board];
     newBoard[index] = currentPlayer;
 
@@ -138,7 +175,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       try {
         playMoveSound();
       } catch (error) {
-        console.log('Error playing sound:', error);
+        // Error playing sound
       }
     }
 
@@ -236,6 +273,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Show winner modal if there's a winner and betting is active
       showWinnerModal: gameWinner !== null && currentBetAmount > 0,
     });
+    
+    // Only save game state for non-multiplayer modes (to persist on refresh)
+    // In multiplayer, state is synced via network, not local storage
+    if (get().gameMode !== 'multiplayer') {
+      get().saveGameState();
+    }
 
     // Check achievements after state is updated
     if (shouldCheckAchievements) {
@@ -255,14 +298,57 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // If multiplayer mode, send move to opponent
     if (get().gameMode === 'multiplayer') {
-      multiplayerService.sendMove(index);
-      multiplayerService.sendSync(newBoard, nextPlayer, gameWinner, isGameDraw);
+      // Check which service is connected
+      const wifiState = multiplayerService.getState();
+      const internetState = internetMultiplayerService.getState();
+      
+      if (wifiState.status === 'connected') {
+        multiplayerService.sendMove(index);
+        multiplayerService.sendSync(newBoard, nextPlayer, gameWinner, isGameDraw);
+      } else if (internetState.status === 'connected') {
+        // For internet multiplayer, send the move with the current board state
+        // This ensures Firebase has the complete board including your move
+        // The sendMove function will read from Firebase and merge, but we pass the board
+        // to ensure consistency
+        internetMultiplayerService.sendMove(index, newBoard);
+        // Also send sync for winner/draw state updates
+        if (gameWinner !== null || isGameDraw) {
+          internetMultiplayerService.sendSync(newBoard, nextPlayer, gameWinner, isGameDraw);
+        }
+      }
     }
   },
 
   resetGame: () => {
     const state = get();
-    const startingPlayer = state.gameMode === 'ai' && state.aiPlayer === 'X' ? 'X' : 'X';
+    
+    // Determine starting player
+    let startingPlayer: Player = 'X';
+    
+    if (state.gameMode === 'ai') {
+      // For AI mode, AI always goes first if AI is X
+      startingPlayer = state.aiPlayer === 'X' ? 'X' : 'X';
+    } else if (state.gameMode === 'multiplayer') {
+      // For multiplayer, alternate starting players
+      // If last game was won by X, O starts next (or vice versa)
+      // If last game was a draw, alternate based on who started last
+      // For simplicity, alternate: X starts first game, O starts second, etc.
+      // We'll use the winner of the previous game to determine who starts next
+      if (state.winner === 'X') {
+        // X won, so O starts next game
+        startingPlayer = 'O';
+      } else if (state.winner === 'O') {
+        // O won, so X starts next game
+        startingPlayer = 'X';
+      } else {
+        // Draw or first game - alternate based on current player
+        // If current player is X, O starts next; if O, X starts next
+        startingPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+      }
+    } else {
+      // PvP mode - always start with X
+      startingPlayer = 'X';
+    }
     
     set({
       board: getEmptyBoard(state.boardSize),
@@ -272,9 +358,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
       showWinnerModal: false,
       gameStartTime: null,
     });
+    
+    // Only save game state for non-multiplayer modes (to persist on refresh)
+    // In multiplayer, state is synced via network, not local storage
+    if (state.gameMode !== 'multiplayer') {
+      get().saveGameState();
+    }
+
+    // If multiplayer mode, send reset to opponent with starting player
+    if (state.gameMode === 'multiplayer') {
+      const wifiState = multiplayerService.getState();
+      const internetState = internetMultiplayerService.getState();
+      
+      if (wifiState.status === 'connected') {
+        multiplayerService.sendReset(startingPlayer);
+      } else if (internetState.status === 'connected') {
+        internetMultiplayerService.sendReset(startingPlayer);
+      }
+    }
 
     // If AI goes first, make AI move
-    if (state.gameMode === 'ai' && state.aiPlayer === 'X') {
+    if (state.gameMode === 'ai' && state.aiPlayer === startingPlayer) {
       setTimeout(() => {
         get().makeAIMove();
       }, 500);
@@ -521,12 +625,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setMultiplayerMode: (enabled: boolean) => {
     if (enabled) {
       set({ gameMode: 'multiplayer' });
-      // Setup multiplayer listeners
+      // Setup WiFi multiplayer listeners
       multiplayerService.on('move', (data: { index: number; player: Player }) => {
         get().handleMultiplayerMove(data.index, data.player);
       });
-      multiplayerService.on('reset', () => {
-        get().resetGame();
+      multiplayerService.on('reset', (data: { startingPlayer?: Player } = {}) => {
+        const state = get();
+        const startingPlayer = data.startingPlayer || 'X';
+        // Reset game state without saving (multiplayer syncs via network)
+        // Only update if we're still in multiplayer mode (prevent stale updates)
+        if (state.gameMode === 'multiplayer') {
+          set({
+            board: getEmptyBoard(state.boardSize),
+            currentPlayer: startingPlayer,
+            winner: null,
+            isDraw: false,
+            showWinnerModal: false,
+            gameStartTime: null,
+          });
+        }
       });
       multiplayerService.on('sync', (data: any) => {
         set({
@@ -536,8 +653,138 @@ export const useGameStore = create<GameStore>((set, get) => ({
           isDraw: data.isDraw !== undefined ? data.isDraw : get().isDraw,
         });
       });
+      // Setup Internet multiplayer listeners
+      // Track last processed move to prevent duplicate updates
+      let lastProcessedMoveIndex: number | null = null;
+      let lastProcessedMovePlayer: Player | null = null;
+      
+      internetMultiplayerService.on('move', (data: { index: number; player: Player; board?: Board; currentPlayer?: Player }) => {
+        // Prevent duplicate processing of the same move
+        if (lastProcessedMoveIndex === data.index && lastProcessedMovePlayer === data.player) {
+          return; // Already processed this move
+        }
+        
+        lastProcessedMoveIndex = data.index;
+        lastProcessedMovePlayer = data.player;
+        
+        // If full board is provided, sync it directly (don't call makeMove as board is already updated in Firebase)
+        if (data.board && Array.isArray(data.board) && data.board.length === 9) {
+          const currentState = get();
+          // Check winner and draw from the synced board
+          const boardSize = 3; // Always 3x3 for internet multiplayer
+          const { checkWinner, checkDraw } = require('../utils/gameLogic');
+          const gameWinner = checkWinner(data.board, boardSize);
+          const isGameDraw = checkDraw(data.board, boardSize);
+          
+          // ALWAYS update board when receiving move with full board (ensures opponent moves are visible)
+          // This is the source of truth from Firebase
+          set({
+            board: data.board,
+            boardSize: 3, // Always 3x3 for internet multiplayer
+            currentPlayer: data.currentPlayer || currentState.currentPlayer,
+            winner: gameWinner,
+            isDraw: isGameDraw,
+          });
+            
+          // Don't save game state in multiplayer - it's synced via network
+          // Only save for non-multiplayer modes
+          if (get().gameMode !== 'multiplayer') {
+            get().saveGameState();
+          }
+        } else {
+          // If board not provided, update the specific cell directly
+          const currentState = get();
+          if (currentState.gameMode === 'multiplayer') {
+            // Update the specific cell with opponent's move
+            const newBoard = [...currentState.board];
+            newBoard[data.index] = data.player;
+            
+            // Check winner and draw
+            const boardSize = 3;
+            const { checkWinner, checkDraw } = require('../utils/gameLogic');
+            const gameWinner = checkWinner(newBoard, boardSize);
+            const isGameDraw = checkDraw(newBoard, boardSize);
+            
+            // Switch turn
+            const nextPlayer = currentState.currentPlayer === 'X' ? 'O' : 'X';
+            
+            set({
+              board: newBoard,
+              currentPlayer: nextPlayer,
+              winner: gameWinner,
+              isDraw: isGameDraw,
+            });
+          }
+        }
+      });
+      
+      // Listen for turn updates to fix "Waiting for opponent" on both devices
+      internetMultiplayerService.on('turn', (data: { currentPlayer: Player; isMyTurn: boolean }) => {
+        const currentState = get();
+        // Update currentPlayer to fix turn detection
+        if (data.currentPlayer !== currentState.currentPlayer) {
+          set({
+            currentPlayer: data.currentPlayer,
+          });
+          // Don't save game state in multiplayer - it's synced via network
+          // Only save for non-multiplayer modes
+          if (get().gameMode !== 'multiplayer') {
+            get().saveGameState();
+          }
+        }
+      });
+      internetMultiplayerService.on('reset', (data: { startingPlayer?: Player } = {}) => {
+        const state = get();
+        const startingPlayer = data.startingPlayer || 'X';
+        // Reset game state without saving (multiplayer syncs via network)
+        // Only update if we're still in multiplayer mode (prevent stale updates)
+        if (state.gameMode === 'multiplayer') {
+          set({
+            board: getEmptyBoard(state.boardSize),
+            currentPlayer: startingPlayer,
+            winner: null,
+            isDraw: false,
+            showWinnerModal: false,
+            gameStartTime: null,
+          });
+        }
+      });
+      internetMultiplayerService.on('sync', (data: any) => {
+        if (!data) return;
+        const currentState = get();
+        
+        // Sync handler - ALWAYS update board for real-time sync
+        // This ensures opponent moves are visible immediately
+        // Ensure board is always 9 cells (3x3) for internet multiplayer
+        let newBoard = Array.isArray(data.board) ? data.board : currentState.board;
+        
+        // Force board to be exactly 9 cells (3x3)
+        if (newBoard.length !== 9) {
+          newBoard = Array(9).fill(null);
+          const sourceBoard = Array.isArray(data.board) ? data.board : currentState.board;
+          for (let i = 0; i < Math.min(sourceBoard.length, 9); i++) {
+            newBoard[i] = sourceBoard[i];
+          }
+        }
+        
+        const newCurrentPlayer = data.currentPlayer || 'X';
+        const newWinner = data.winner !== undefined ? data.winner : null;
+        const newIsDraw = data.isDraw !== undefined ? data.isDraw : false;
+        
+        // ALWAYS update board from Firebase sync - it's the source of truth
+        // This ensures real-time visibility of opponent moves
+        // Always update to ensure moves are visible immediately (no conditional check)
+        set({
+          board: newBoard,
+          boardSize: 3, // Always 3x3 for internet multiplayer
+          currentPlayer: newCurrentPlayer,
+          winner: newWinner,
+          isDraw: newIsDraw,
+        });
+      });
     } else {
       multiplayerService.disconnect();
+      internetMultiplayerService.disconnect();
       set({ gameMode: 'pvp' });
     }
   },
@@ -554,18 +801,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
   syncMultiplayerState: () => {
     const state = get();
     if (state.gameMode === 'multiplayer') {
-      multiplayerService.sendSync(
-        state.board,
-        state.currentPlayer,
-        state.winner,
-        state.isDraw
-      );
+      const wifiState = multiplayerService.getState();
+      const internetState = internetMultiplayerService.getState();
+      
+      if (wifiState.status === 'connected') {
+        multiplayerService.sendSync(
+          state.board,
+          state.currentPlayer,
+          state.winner,
+          state.isDraw
+        );
+      } else if (internetState.status === 'connected') {
+        internetMultiplayerService.sendSync(
+          state.board,
+          state.currentPlayer,
+          state.winner,
+          state.isDraw
+        );
+      }
     }
   },
 
   // Set board size
   setBoardSize: (size: BoardSize) => {
     const currentState = get();
+    
+    // Check if internet multiplayer is active - lock to 3x3
+    const internetState = internetMultiplayerService.getState();
+    if (internetState.status === 'connected' || internetState.status === 'connecting') {
+      // Force 3x3 for internet multiplayer
+      if (currentState.boardSize !== 3) {
+        size = 3;
+      } else {
+        // Already 3x3, don't allow change
+        return;
+      }
+    }
     
     // If switching away from 3×3 and AI mode is active, switch to PvP
     if (size !== 3 && currentState.gameMode === 'ai') {
@@ -608,7 +879,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       await AsyncStorage.setItem(MARKER_THEME_KEY, JSON.stringify(theme));
       set({ markerTheme: theme });
     } catch (error) {
-      console.log('Error saving marker theme:', error);
+      // Error saving marker theme
     }
   },
 
@@ -622,6 +893,76 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     } catch (error) {
       // Error loading marker theme
+    }
+  },
+
+  // Save current game state to AsyncStorage
+  saveGameState: async () => {
+    try {
+      const state = get();
+      const gameState = {
+        board: state.board,
+        currentPlayer: state.currentPlayer,
+        winner: state.winner,
+        isDraw: state.isDraw,
+        boardSize: state.boardSize,
+        gameMode: state.gameMode,
+        gameStartTime: state.gameStartTime,
+      };
+      await AsyncStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
+    } catch (error) {
+      // Error saving game state
+    }
+  },
+
+  // Load game state from AsyncStorage
+  loadGameState: async () => {
+    try {
+      const gameStateJson = await AsyncStorage.getItem(GAME_STATE_KEY);
+      if (gameStateJson) {
+        const gameState = JSON.parse(gameStateJson);
+        
+        // NEVER load game state if it was in multiplayer mode
+        // Multiplayer state should only come from network sync
+        if (gameState.gameMode === 'multiplayer') {
+          // Clear the stored multiplayer state to prevent conflicts
+          await AsyncStorage.removeItem(GAME_STATE_KEY);
+          // Reset to default state - network will sync the actual state
+          set({
+            board: getEmptyBoard(3),
+            currentPlayer: 'X',
+            winner: null,
+            isDraw: false,
+            boardSize: 3,
+            gameMode: 'pvp', // Reset to PvP, user needs to reconnect
+            gameStartTime: null,
+          });
+          return;
+        }
+        
+        // Only load state for non-multiplayer modes
+        // Ensure board is always 9 cells (3x3) for internet multiplayer
+        let board = Array.isArray(gameState.board) ? gameState.board : getEmptyBoard(gameState.boardSize || 3);
+        if (board.length !== 9 && gameState.gameMode === 'multiplayer') {
+          // Force 3x3 for multiplayer
+          board = Array(9).fill(null);
+          for (let i = 0; i < Math.min(gameState.board.length, 9); i++) {
+            board[i] = gameState.board[i];
+          }
+        }
+        
+        set({
+          board: board,
+          currentPlayer: gameState.currentPlayer || 'X',
+          winner: gameState.winner || null,
+          isDraw: gameState.isDraw || false,
+          boardSize: gameState.boardSize || 3,
+          gameMode: gameState.gameMode || 'pvp',
+          gameStartTime: gameState.gameStartTime || null,
+        });
+      }
+    } catch (error) {
+      // Error loading game state, use defaults
     }
   },
 }));
