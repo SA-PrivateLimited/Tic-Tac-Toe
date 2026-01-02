@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Dimensions } from 'react-native';
 import { Board } from '../components/Board';
 import { ScoreBoard } from '../components/ScoreBoard';
 import { BetModal } from '../components/BetModal';
@@ -23,6 +23,9 @@ import { Player } from '../types/game';
 
 export const GameScreen: React.FC = () => {
   const { theme } = useTheme();
+  const screenWidth = Dimensions.get('window').width;
+  const isTablet = screenWidth >= 600;
+  const buttonWidth = isTablet ? (screenWidth - 80) / 4 : (screenWidth - 64) / 3; // 4 columns on tablet, 3 on mobile
   const {
     board,
     currentPlayer,
@@ -276,70 +279,89 @@ export const GameScreen: React.FC = () => {
       justifyContent: 'space-around',
       width: '100%',
       paddingHorizontal: 16,
-      marginTop: 20,
-      marginBottom: 12,
+      marginTop: 24,
+      marginBottom: 16,
     },
     button: {
-      flex: 1,
       backgroundColor: theme.colors.buttonPrimary,
-      paddingVertical: 12,
-      paddingHorizontal: 18,
-      borderRadius: 10,
-      marginHorizontal: 6,
-      shadowColor: theme.colors.shadowColor,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 6,
-      elevation: 5,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      paddingVertical: 20,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      marginHorizontal: 8,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+      borderWidth: 2,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 100,
+      maxWidth: 150,
+      overflow: 'hidden',
     },
     resetButton: {
       backgroundColor: theme.colors.buttonDestructive,
     },
     bottomButtonContainer: {
       width: '100%',
-      paddingHorizontal: 16,
-      marginTop: 8,
+      paddingHorizontal: 12,
+      marginTop: 12,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      alignItems: 'flex-start',
     },
     setBetButton: {
       backgroundColor: theme.colors.buttonSecondary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     soundButton: {
       backgroundColor: theme.colors.buttonPrimary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     themeButton: {
       backgroundColor: theme.colors.playerO,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     gameModeButton: {
       backgroundColor: theme.colors.buttonPrimary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     multiplayerButton: {
       backgroundColor: theme.colors.buttonPrimary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     boardSizeButton: {
       backgroundColor: theme.colors.buttonSecondary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     achievementsButton: {
       backgroundColor: theme.colors.playerX,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
     },
     statisticsButton: {
       backgroundColor: theme.colors.buttonPrimary,
-      marginBottom: 10,
+      borderColor: 'rgba(255, 255, 255, 0.25)',
     },
     buttonText: {
       color: theme.colors.textPrimary,
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 11,
+      fontWeight: '800',
       textAlign: 'center',
-      letterSpacing: 0.5,
+      letterSpacing: 0.8,
+      marginTop: 6,
+      textTransform: 'uppercase',
+      opacity: 0.95,
+    },
+    buttonIcon: {
+      fontSize: 36,
+      marginBottom: 6,
+      textShadowColor: 'rgba(0, 0, 0, 0.2)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
     },
     buttonDisabled: {
       opacity: 0.5,
@@ -494,32 +516,37 @@ export const GameScreen: React.FC = () => {
         <View style={styles.bottomButtonContainer}>
           {/* Game Mode button */}
           <TouchableOpacity
-            style={[styles.button, styles.gameModeButton]}
+            style={[styles.button, styles.gameModeButton, { width: buttonWidth }]}
             onPress={() => setShowGameModeModal(true)}
           >
+            <Text style={styles.buttonIcon}>
+              {gameMode === 'ai' ? '🤖' : gameMode === 'multiplayer' ? '🌐' : '👥'}
+            </Text>
             <Text style={styles.buttonText}>
               {gameMode === 'ai' 
-                ? `🤖 AI (${aiDifficulty})` 
+                ? `AI (${aiDifficulty})` 
                 : gameMode === 'multiplayer'
-                ? '🌐 Multiplayer'
-                : '👥 PvP'}
+                ? 'Multiplayer'
+                : 'PvP'}
             </Text>
           </TouchableOpacity>
 
           {/* Multiplayer button */}
           <TouchableOpacity
-            style={[styles.button, styles.multiplayerButton]}
+            style={[styles.button, styles.multiplayerButton, { width: buttonWidth }]}
             onPress={() => setShowMultiplayerModal(true)}
           >
-            <Text style={styles.buttonText}>🌐 Play Online</Text>
+            <Text style={styles.buttonIcon}>🌐</Text>
+            <Text style={styles.buttonText}>Play Online</Text>
           </TouchableOpacity>
 
           {/* Marker Theme button */}
           <TouchableOpacity
-            style={[styles.button, styles.boardSizeButton]}
+            style={[styles.button, styles.boardSizeButton, { width: buttonWidth }]}
             onPress={() => setShowMarkerModal(true)}
           >
-            <Text style={styles.buttonText}>🎯 Markers</Text>
+            <Text style={styles.buttonIcon}>🎯</Text>
+            <Text style={styles.buttonText}>Markers</Text>
           </TouchableOpacity>
 
           {/* Board Size button */}
@@ -527,6 +554,7 @@ export const GameScreen: React.FC = () => {
             style={[
               styles.button,
               styles.boardSizeButton,
+              { width: buttonWidth },
               (internetMultiplayerService.getState().status === 'connected' || 
                internetMultiplayerService.getState().status === 'connecting') && styles.buttonDisabled
             ]}
@@ -541,53 +569,59 @@ export const GameScreen: React.FC = () => {
             disabled={internetMultiplayerService.getState().status === 'connected' || 
                      internetMultiplayerService.getState().status === 'connecting'}
           >
+            <Text style={styles.buttonIcon}>📐</Text>
             <Text style={styles.buttonText}>
-              📐 {boardSize}×{boardSize}
+              {boardSize}×{boardSize}
               {(internetMultiplayerService.getState().status === 'connected' || 
-                internetMultiplayerService.getState().status === 'connecting') ? ' (Locked)' : ''}
+                internetMultiplayerService.getState().status === 'connecting') ? ' 🔒' : ''}
             </Text>
           </TouchableOpacity>
 
           {/* Set/Reset Bet Amount button */}
           <TouchableOpacity
-            style={[styles.button, styles.setBetButton]}
+            style={[styles.button, styles.setBetButton, { width: buttonWidth }]}
             onPress={handleSetBetAmount}
           >
+            <Text style={styles.buttonIcon}>💰</Text>
             <Text style={styles.buttonText}>
-              {betAmount > 0 ? `Change Points (${betAmount})` : 'Set Points'}
+              {betAmount > 0 ? `Points (${betAmount})` : 'Set Points'}
             </Text>
           </TouchableOpacity>
 
           {/* Sound Settings button */}
           <TouchableOpacity
-            style={[styles.button, styles.soundButton]}
+            style={[styles.button, styles.soundButton, { width: buttonWidth }]}
             onPress={() => setShowSoundSettingsModal(true)}
           >
-            <Text style={styles.buttonText}>🎵 Sound Settings</Text>
+            <Text style={styles.buttonIcon}>🎵</Text>
+            <Text style={styles.buttonText}>Sound</Text>
           </TouchableOpacity>
 
           {/* Theme button */}
           <TouchableOpacity
-            style={[styles.button, styles.themeButton]}
+            style={[styles.button, styles.themeButton, { width: buttonWidth }]}
             onPress={() => setShowThemeModal(true)}
           >
-            <Text style={styles.buttonText}>🎨 Theme</Text>
+            <Text style={styles.buttonIcon}>🎨</Text>
+            <Text style={styles.buttonText}>Theme</Text>
           </TouchableOpacity>
 
           {/* Achievements button */}
           <TouchableOpacity
-            style={[styles.button, styles.achievementsButton]}
+            style={[styles.button, styles.achievementsButton, { width: buttonWidth }]}
             onPress={() => setShowAchievementsModal(true)}
           >
-            <Text style={styles.buttonText}>🏆 Achievements</Text>
+            <Text style={styles.buttonIcon}>🏆</Text>
+            <Text style={styles.buttonText}>Achievements</Text>
           </TouchableOpacity>
 
           {/* Statistics button */}
           <TouchableOpacity
-            style={[styles.button, styles.statisticsButton]}
+            style={[styles.button, styles.statisticsButton, { width: buttonWidth }]}
             onPress={() => setShowStatisticsModal(true)}
           >
-            <Text style={styles.buttonText}>📊 Statistics</Text>
+            <Text style={styles.buttonIcon}>📊</Text>
+            <Text style={styles.buttonText}>Statistics</Text>
           </TouchableOpacity>
         </View>
 

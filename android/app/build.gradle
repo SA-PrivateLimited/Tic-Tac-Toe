@@ -7,12 +7,13 @@ apply plugin: "com.google.gms.google-services"
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
-react {
-    // This is required for React Native 0.73+
-}
+project.ext.react = [
+    enableHermes: true
+]
 
 def enableProguardInReleaseBuilds = true
-def jscFlavor = 'org.webkit:android-jsc:+'
+// JSC removed - using Hermes only for 16 KB page size support
+// def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -24,8 +25,8 @@ android {
         applicationId "com.satictactoe"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "1.0.22"
+        versionCode 25
+        versionName "1.0.25"
         
         // Support for 16 KB page size devices
         // NDK 26.1+ is REQUIRED for 16 KB page size support (Play Store requirement)
@@ -101,6 +102,14 @@ android {
             // This ensures native libraries are uncompressed and properly aligned
             useLegacyPackaging = false
         }
+        // Exclude JSC libraries - they don't support 16 KB page sizes
+        // Only Hermes should be included
+        excludes += [
+            '**/libjsc.so',
+            '**/libjscexecutor.so',
+            '**/libjscinstance.so',
+            '**/libjsc_*.so'
+        ]
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
     }
@@ -114,10 +123,17 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
     }
+    // CRITICAL: Exclude JSC completely - it does NOT support 16 KB page sizes
+    exclude group: 'org.webkit', module: 'android-jsc'
+    exclude group: 'com.facebook.react', module: 'react-native-jsc'
 }
 
 dependencies {
-    implementation("com.facebook.react:react-android")
+    // CRITICAL: Explicitly exclude JSC from react-android dependency
+    // This ensures JSC is never included, even as a transitive dependency
+    implementation("com.facebook.react:react-android") {
+        exclude group: 'org.webkit', module: 'android-jsc'
+    }
     
     // AndroidX Activity for edge-to-edge support
     implementation("androidx.activity:activity-ktx:1.9.0")
@@ -135,10 +151,12 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.0')
     implementation 'com.google.firebase:firebase-database'
 
+    // CRITICAL: Always use Hermes for 16 KB page size support
+    // JSC libraries do NOT support 16 KB page sizes and will cause Play Store rejection
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
-        implementation jscFlavor
+        throw new GradleException("Hermes must be enabled for 16 KB page size support. Set hermesEnabled=true in gradle.properties")
     }
 }
 

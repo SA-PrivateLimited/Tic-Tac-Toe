@@ -8,7 +8,9 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint .",
-    "deploy-firebase-rules": "node scripts/deploy-firebase-rules.js"
+    "deploy-firebase-rules": "node scripts/deploy-firebase-rules.js",
+    "build:aab": "cd android && ./increment-version-and-build.sh bundle",
+    "build:apk": "cd android && ./increment-version-and-build.sh apk"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.21.0",
