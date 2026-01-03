@@ -18,18 +18,29 @@ try {
     // Check if Firebase is initialized
     try {
       // Try to get the default app - this will throw if not initialized
-      const app = firebase.app();
+      // Use getApp() for modern API (React Native Firebase v22+)
+      const app = firebase.getApp();
       
       if (app) {
         // Try to access database to verify it's working
-        // This will throw if google-services.json is missing or invalid
-        const db = firebaseDatabase();
-        if (db) {
-          firebaseAvailable = true;
-          firebaseError = null;
-        } else {
+        // Use getDatabase() for modern API, fallback to firebaseDatabase() for compatibility
+        try {
+          const getDatabase = firebaseDatabase.getDatabase || (() => firebaseDatabase());
+          const db = getDatabase(app);
+          if (db) {
+            firebaseAvailable = true;
+            firebaseError = null;
+            console.log('✅ Firebase initialized successfully');
+          } else {
+            firebaseAvailable = false;
+            firebaseError = 'Database instance not available. Please rebuild the app.';
+          }
+        } catch (dbError: any) {
+          // Database access failed - might be a configuration issue
           firebaseAvailable = false;
-          firebaseError = 'Database instance not available. Please rebuild the app.';
+          const dbErrorMsg = dbError?.message || 'Database access failed';
+          console.log('Firebase database error:', dbErrorMsg);
+          firebaseError = `Database error: ${dbErrorMsg}. Please ensure Realtime Database is enabled in Firebase Console.`;
         }
       } else {
         firebaseAvailable = false;
@@ -39,6 +50,7 @@ try {
       // Firebase not initialized - need google-services.json or rebuild
       firebaseAvailable = false;
       const errorMsg = initError?.message || 'Firebase initialization failed';
+      console.log('Firebase initialization error:', errorMsg);
       if (errorMsg.includes('google-services.json') || errorMsg.includes('No Firebase App')) {
         firebaseError = 'Firebase not configured. Please ensure google-services.json is in android/app/ and rebuild the app.';
       } else {
@@ -53,23 +65,28 @@ try {
   // Firebase not available - package not installed or not configured
   firebaseAvailable = false;
   firebaseError = error?.message || 'Firebase packages not installed';
+  console.log('Firebase module load error:', error);
 }
 
 export const isInternetMultiplayerAvailable = (): boolean => {
-  // Re-check at runtime in case Firebase was initialized after module load
+      // Re-check at runtime in case Firebase was initialized after module load
   if (!firebaseAvailable && firebase && database) {
     try {
-      const app = firebase.app();
+      // Use getApp() for modern API (React Native Firebase v22+)
+      const app = firebase.getApp();
       if (app) {
-        const db = database();
+        const getDatabase = database.getDatabase || (() => database());
+        const db = getDatabase(app);
         if (db) {
           firebaseAvailable = true;
           firebaseError = null;
+          console.log('✅ Firebase available (runtime check)');
           return true;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       // Still not available
+      console.log('Firebase runtime check failed:', e?.message);
     }
   }
   return firebaseAvailable;
@@ -182,36 +199,72 @@ class InternetMultiplayerService {
       this.state.isMyTurn = true;
 
       // Use modular API: getDatabase() and ref()
-      const app = firebase.app();
-      const { getDatabase, ref } = database;
-      const db = getDatabase ? getDatabase(app) : database();
-      this.roomRef = ref ? ref(db, `rooms/${roomId}`) : db.ref(`rooms/${roomId}`);
-      this.gameRef = ref ? ref(db, `games/${roomId}`) : db.ref(`games/${roomId}`);
+      // Use getApp() for modern API (React Native Firebase v22+)
+      const app = firebase.getApp();
+      const { getDatabase, ref, set, onDisconnect, remove } = database;
+      
+      let db;
+      if (getDatabase) {
+        // Use modern modular API
+        db = getDatabase(app);
+        this.roomRef = ref(db, `rooms/${roomId}`);
+        this.gameRef = ref(db, `games/${roomId}`);
+      } else {
+        // Fallback to namespaced API
+        db = database();
+        this.roomRef = db.ref(`rooms/${roomId}`);
+        this.gameRef = db.ref(`games/${roomId}`);
+      }
 
       // Create room with host info (using modular API: set())
-      const { set, onDisconnect } = database;
       if (set) {
-        await set(this.roomRef, {
-          host: true,
-          player2: false,
-          createdAt: Date.now(),
-        });
-        await set(this.gameRef, {
-          board: Array(9).fill(null),
-          currentPlayer: 'X',
-          winner: null,
-          isDraw: false,
-          lastMove: null,
-        });
+        // Use modular API
+        console.log('Creating room in Firebase:', roomId);
+        try {
+          await set(this.roomRef, {
+            host: true,
+            player2: false,
+            createdAt: Date.now(),
+          });
+          console.log('Room created successfully');
+          
+          await set(this.gameRef, {
+            board: Array(9).fill(null),
+            currentPlayer: 'X',
+            winner: null,
+            isDraw: false,
+            lastMove: null,
+          });
+          console.log('Game state created successfully');
+        } catch (setError: any) {
+          console.error('Error setting room/game data:', setError);
+          throw new Error(`Failed to create room: ${setError?.message || 'Unknown error'}`);
+        }
         
         // Set up disconnect cleanup for host (auto-remove room and game)
-        if (onDisconnect) {
-          onDisconnect(this.roomRef).remove();
-          onDisconnect(this.gameRef).remove();
-        } else if (this.roomRef.onDisconnect) {
-          // Fallback to namespaced API
-          this.roomRef.onDisconnect().remove();
-          this.gameRef.onDisconnect().remove();
+        if (onDisconnect && remove) {
+          try {
+            // Use modular API: onDisconnect returns an object with remove method
+            const roomDisconnect = onDisconnect(this.roomRef);
+            const gameDisconnect = onDisconnect(this.gameRef);
+            if (roomDisconnect && typeof roomDisconnect.remove === 'function') {
+              roomDisconnect.remove();
+            }
+            if (gameDisconnect && typeof gameDisconnect.remove === 'function') {
+              gameDisconnect.remove();
+            }
+          } catch (e) {
+            // Ignore onDisconnect setup errors
+            console.log('onDisconnect setup error (ignored):', e);
+          }
+        } else if (this.roomRef && this.roomRef.onDisconnect) {
+          // Fallback to namespaced API (deprecated)
+          try {
+            this.roomRef.onDisconnect().remove();
+            this.gameRef.onDisconnect().remove();
+          } catch (e) {
+            console.log('onDisconnect fallback error (ignored):', e);
+          }
         }
       } else {
         // Fallback to namespaced API
@@ -230,8 +283,12 @@ class InternetMultiplayerService {
         
         // Set up disconnect cleanup for host
         if (this.roomRef.onDisconnect) {
-          this.roomRef.onDisconnect().remove();
-          this.gameRef.onDisconnect().remove();
+          try {
+            this.roomRef.onDisconnect().remove();
+            this.gameRef.onDisconnect().remove();
+          } catch (e) {
+            console.log('onDisconnect error (ignored):', e);
+          }
         }
       }
 
@@ -450,10 +507,25 @@ class InternetMultiplayerService {
         }
       });
 
+      console.log('Room creation complete, roomId:', roomId);
       return roomId;
     } catch (error: any) {
+      console.error('createRoom error:', error);
       this.state.status = 'error';
       this.emit('error', error);
+      // Clean up on error
+      if (this.roomRef) {
+        try {
+          const { remove } = database;
+          if (remove) {
+            await remove(this.roomRef);
+          } else if (this.roomRef.remove) {
+            await this.roomRef.remove();
+          }
+        } catch (cleanupError) {
+          console.log('Cleanup error (ignored):', cleanupError);
+        }
+      }
       throw error;
     }
   }
@@ -541,10 +613,14 @@ class InternetMultiplayerService {
       }
       
       // Set up disconnect cleanup for client (remove player2 flag)
-      if (onDisconnect) {
-        onDisconnect(this.roomRef).update({ player2: false });
-      } else if (this.roomRef.onDisconnect) {
-        // Fallback to namespaced API
+      if (onDisconnect && update) {
+        // Use modular API: onDisconnect returns an object with update method
+        const roomDisconnect = onDisconnect(this.roomRef);
+        if (roomDisconnect && typeof roomDisconnect.update === 'function') {
+          roomDisconnect.update({ player2: false });
+        }
+      } else if (this.roomRef && this.roomRef.onDisconnect) {
+        // Fallback to namespaced API (deprecated)
         this.roomRef.onDisconnect().update({ player2: false });
       }
 
@@ -881,9 +957,16 @@ class InternetMultiplayerService {
       const { update, remove } = database;
       
       // First, remove lastMove to prevent listeners from firing on old data
-      if (remove) {
-        await remove(this.gameRef.child('lastMove'));
+      const { child } = database;
+      if (remove && child) {
+        // Use modular API: child() is a function, not a method
+        const lastMoveRef = child(this.gameRef, 'lastMove');
+        await remove(lastMoveRef);
+      } else if (remove) {
+        // Try direct remove on reference (if it's already a child ref)
+        await remove(this.gameRef);
       } else {
+        // Fallback to namespaced API (deprecated)
         await this.gameRef.child('lastMove').remove();
       }
       
@@ -996,16 +1079,25 @@ class InternetMultiplayerService {
 
     // Clean up room if host (manual cleanup for graceful disconnect)
     if (this.state.isHost && this.state.roomId) {
-      const db = database();
-      if (db) {
-        const { ref, remove } = database;
-        if (ref && remove) {
+      try {
+        const app = firebase.getApp();
+        const { getDatabase, ref, remove } = database;
+        if (getDatabase && ref && remove) {
+          // Use modular API
+          const db = getDatabase(app);
           remove(ref(db, `rooms/${this.state.roomId}`));
           remove(ref(db, `games/${this.state.roomId}`));
         } else {
-          db.ref(`rooms/${this.state.roomId}`).remove();
-          db.ref(`games/${this.state.roomId}`).remove();
+          // Fallback to namespaced API (deprecated but still works)
+          const db = database();
+          if (db) {
+            db.ref(`rooms/${this.state.roomId}`).remove();
+            db.ref(`games/${this.state.roomId}`).remove();
+          }
         }
+      } catch (e) {
+        // Ignore cleanup errors
+        console.log('Cleanup error (ignored):', e);
       }
     }
 
